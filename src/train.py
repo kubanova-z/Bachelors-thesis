@@ -1,9 +1,14 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
+import torch.nn as nn       #neural network module
+import torch.optim as optim     #optimization module
 
 from sklearn.metrics import classification_report
 import pandas as pd
+
+#feed forward neural network
+#inupt(dim) - size of the input features (5000)
+#hidden(dim) - number of neurons in the hidden layer
+#dropout - probability of a neuron being set to zero (only during training)
 
 class TextClassifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout_rate = 0.5):
@@ -17,10 +22,10 @@ class TextClassifier(nn.Module):
         # 3. dropout layer (prevent overfitting)
         self.dropout = nn.Dropout(p=dropout_rate)
 
-        # 4. output layer
+        # 4. output layer (raw scores for each category)
         self.fc2 = nn.Linear(hidden_dim, output_dim)
 
-
+#operations on input tensor (data structure)
     def forward(self, x):
         # 1. layer
         x = self.fc1(x)
@@ -32,36 +37,49 @@ class TextClassifier(nn.Module):
         return self.fc2(x)
         
         
+#set up the model, train on vectorized data and evaluate
 
 def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
+    #sparse matrices (convert to pytorch float)
     X_train = torch.tensor(X_train.toarray()).float()
     X_test = torch.tensor(X_test.toarray()).float()
 
     # cotegories -> integers
     classes = sorted(list(set(y_train)))
-    class_to_idx = {cls: i for i, cls in enumerate(classes)}
+    class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
 
+    #training and test category labels (panda series) - map to correct ids
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
+    #initialization of text classifier
     model = TextClassifier(X_train.shape[1], 128, len(classes))
+    #loss function
     criterion = nn.CrossEntropyLoss()
+    #optimizer
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
+
+    #TRAINING
     for epoch in range(epochs):
-        optimizer.zero_grad()
-        outputs = model(X_train)
-        loss = criterion(outputs, y_train)
-        loss.backward()
-        optimizer.step()
+        model.train()   #set to training mode (enable dropout)
+        optimizer.zero_grad()   #reset gradients
+        outputs = model(X_train)    #predicted outputs
+        loss = criterion(outputs, y_train) #calculate loss
+        loss.backward() #backward pass - algoritmus spatneho sirenia chyby
+        optimizer.step()    #update model weights based on gradients
         print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
 
+        #test accuracy check
         with torch.no_grad():
-            preds = model(X_test).argmax(dim=1)
-            acc = (preds == y_test).float().mean().item()
+            model.eval()    #set to evaluation mode (disable dropout)
+            preds = model(X_test).argmax(dim=1) #predicted ids
+            acc = (preds == y_test).float().mean().item()   #accuracy (correct / total samples)
             print(f'Test accuracy: {acc:.4f}')
-            
+
+    #final accuracy check after all epochs
     with torch.no_grad():
+        model.eval()
         # raw predictions
         outputs = model(X_test)
 
@@ -71,10 +89,10 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
         # true class ids
         true_ids = y_test.cpu().numpy()
 
-# inverse mapping for labels
+# inverse mapping for labels / for readable report
 
     idx_to_class = {i: cls for cls, i in class_to_idx.items()}
-    target_names = [idx_to_class[i] for i in sorted(idx_to_class.keys())]
+    target_names = [idx_to_class[i] for i in sorted(idx_to_class.keys())] #target names sorted according to ids
 
     print("\n" + "="*50)
     print("CLASSIFICATION REPORT")
