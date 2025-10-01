@@ -62,6 +62,11 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
     #optimizer
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
+    #accuracy and loss
+
+    train_loss_history = []
+    test_acc_history = []
+
 
     #TRAINING
     for epoch in range(epochs):
@@ -71,6 +76,7 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
         loss = criterion(outputs, y_train) #calculate loss
         loss.backward() #backward pass - algoritmus spatneho sirenia chyby
         optimizer.step()    #update model weights based on gradients
+        train_loss_history.append(loss.item())  #trauning loss
         print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
 
         #test accuracy check
@@ -78,6 +84,7 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
             model.eval()    #set to evaluation mode (disable dropout)
             preds = model(X_test).argmax(dim=1) #predicted ids
             acc = (preds == y_test).float().mean().item()   #accuracy (correct / total samples)
+            test_acc_history.append(acc)
             print(f'Test accuracy: {acc:.4f}')
 
     #final accuracy check after all epochs
@@ -114,8 +121,13 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
     #plot confusion matrix
     plot_confusion_matrix(true_ids, preds_ids, target_names)
 
+    #plot learning curve
+    plot_learning_curve(epochs, train_loss_history,test_acc_history)
+
     return model, class_to_idx
 
+
+#CONFUSION MATRIX
 def plot_confusion_matrix(true_ids, preds_ids, target_names):
     cm = confusion_matrix(true_ids, preds_ids)
     cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -142,3 +154,29 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names):
     plt.close(fig) # Close the figure to free up memory
     
     print("\n[INFO] Confusion Matrix saved as confusion_matrix_results.png in the current directory.")
+
+
+#LEARNING CURVE
+def plot_learning_curve(epochs, train_loss, test_acc):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,5))
+    epoch_range = range(1, epochs+1)
+
+    ax1.plot(epoch_range, train_loss, label='Training loss', color='red')
+    ax1.set_title('Training loss per epoch', fontsize=14)
+    ax1.set_xlabel('Epoch', fontsize=12)
+    ax1.set_ylabel('Loss (Cross Entropy)', fontsize=12)
+    ax1.legend()
+    ax1.grid(True, linestyle='--', alpha=0.6)
+
+
+    ax2.plot(epoch_range, test_acc, label='Test accuracy', color='blue')
+    ax2.set_title('Test accuracy per Epoch', fontsize=14)
+    ax1.set_xlabel('Epoch', fontsize=12)
+    ax1.set_ylabel('Accuracy', fontsize=12)
+    ax1.legend()
+    ax1.grid(True, linestyle='--', alpha=0.6)
+
+    plt.tight_layout()
+    plt.savefig('learning_curve.png')
+    plt.close(fig)
+    
