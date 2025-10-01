@@ -1,8 +1,11 @@
 import torch
 import torch.nn as nn       #neural network module
 import torch.optim as optim     #optimization module
+import matplotlib.pyplot as plt     #plotting library
+import numpy as np  # for matrix handling
 
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+
 import pandas as pd
 
 #feed forward neural network
@@ -105,6 +108,37 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
         target_names=target_names,
         digits = 4
     )
+    #accuracy report
     print(report)
 
+    #plot confusion matrix
+    plot_confusion_matrix(true_ids, preds_ids, target_names)
+
     return model, class_to_idx
+
+def plot_confusion_matrix(true_ids, preds_ids, target_names):
+    cm = confusion_matrix(true_ids, preds_ids)
+    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    #display object
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm_normalized, display_labels=target_names)
+
+    #plot matrix
+    fig, ax = plt.subplots(figsize=(10,10))
+    disp.plot(
+        cmap=plt.cm.PuBuGn, 
+        ax=ax, 
+        xticks_rotation='vertical',
+        values_format='.1%')
+
+    ax.set_title('Confusion matrix', fontsize=16, fontweight='bold')
+    ax.set_ylabel('True Category', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Predicted Category', fontsize=12, fontweight='bold')
+    
+    plt.tight_layout()
+
+    #plt.show()
+    plt.savefig('confusion_matrix_results.png') 
+    plt.close(fig) # Close the figure to free up memory
+    
+    print("\n[INFO] Confusion Matrix saved as confusion_matrix_results.png in the current directory.")
