@@ -124,6 +124,9 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
     #plot learning curve
     plot_learning_curve(epochs, train_loss_history,test_acc_history)
 
+    #plot metrics bar chart
+    plot_metrics_bar_chart(true_ids, preds_ids, target_names)
+
     return model, class_to_idx
 
 
@@ -179,4 +182,38 @@ def plot_learning_curve(epochs, train_loss, test_acc):
     plt.tight_layout()
     plt.savefig('learning_curve.png')
     plt.close(fig)
+
+    
+# bar chart - F1 score
+def plot_metrics_bar_chart(true_ids, preds_ids, target_names):
+
+    #classification report as dictionary
+    report = classification_report(
+        true_ids, preds_ids, target_names=target_names, output_dict=True
+    )
+
+    # report dictionary -> DataFrame 
+    # transpose, exclude final rows
+    df_report = pd.DataFrame(report).transpose().iloc[:-3]
+
+    fig, ax = plt.subplots(figsize=(10,6))
+
+    df_report[['precision', 'recall', 'f1-score']].plot(
+        kind='bar',
+        ax=ax,
+        rot=45,
+        cmap=plt.cm.PuBuGn,
+        edgecolor = 'black'
+    )
+
+    ax.set_title('Precision, Recall, F1', fontsize=14)
+    ax.set_ylabel('Score', fontsize =12)
+    ax.set_xlabel('Category', fontsize=12)
+    ax.legend(loc='lower right')
+    ax.grid(axis = 'y', linestyle = '--', alpha=0.7)
+
+    plt.tight_layout()
+    plt.savefig('per_class_metrics.png', dpi=300)
+    plt.close(fig)
+
     
