@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt     #plotting library
 import numpy as np  # for matrix handling
 
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from .plotting import plot_confusion_matrix, plot_learning_curve, plot_metrics_bar_chart
 
 import pandas as pd
 
@@ -104,9 +105,9 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
     idx_to_class = {i: cls for cls, i in class_to_idx.items()}
     target_names = [idx_to_class[i] for i in sorted(idx_to_class.keys())] #target names sorted according to ids
 
-    print("\n" + "="*50)
+    """     print("\n" + "="*50)
     print("CLASSIFICATION REPORT")
-    print("="*50)
+    print("="*50) """
 
     # classification report
     report = classification_report(
@@ -116,7 +117,9 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
         digits = 4
     )
     #accuracy report
-    print(report)
+    #print(report)
+
+    """ plotting """
 
     #plot confusion matrix
     plot_confusion_matrix(true_ids, preds_ids, target_names)
@@ -130,90 +133,3 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
     return model, class_to_idx
 
 
-#CONFUSION MATRIX
-def plot_confusion_matrix(true_ids, preds_ids, target_names):
-    cm = confusion_matrix(true_ids, preds_ids)
-    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-    #display object
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm_normalized, display_labels=target_names)
-
-    #plot matrix
-    fig, ax = plt.subplots(figsize=(10,10))
-    disp.plot(
-        cmap=plt.cm.PuBuGn, 
-        ax=ax, 
-        xticks_rotation='vertical',
-        values_format='.1%')
-
-    ax.set_title('Confusion matrix', fontsize=16, fontweight='bold')
-    ax.set_ylabel('True Category', fontsize=12, fontweight='bold')
-    ax.set_xlabel('Predicted Category', fontsize=12, fontweight='bold')
-    
-    plt.tight_layout()
-
-    #plt.show()
-    plt.savefig('confusion_matrix_results.png') 
-    plt.close(fig) # Close the figure to free up memory
-    
-    print("\n[INFO] Confusion Matrix saved as confusion_matrix_results.png in the current directory.")
-
-
-#LEARNING CURVE
-def plot_learning_curve(epochs, train_loss, test_acc):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,5))
-    epoch_range = range(1, epochs+1)
-
-    ax1.plot(epoch_range, train_loss, label='Training loss', color='red')
-    ax1.set_title('Training loss per epoch', fontsize=14)
-    ax1.set_xlabel('Epoch', fontsize=12)
-    ax1.set_ylabel('Loss (Cross Entropy)', fontsize=12)
-    ax1.legend()
-    ax1.grid(True, linestyle='--', alpha=0.6)
-
-
-    ax2.plot(epoch_range, test_acc, label='Test accuracy', color='blue')
-    ax2.set_title('Test accuracy per Epoch', fontsize=14)
-    ax1.set_xlabel('Epoch', fontsize=12)
-    ax1.set_ylabel('Accuracy', fontsize=12)
-    ax1.legend()
-    ax1.grid(True, linestyle='--', alpha=0.6)
-
-    plt.tight_layout()
-    plt.savefig('learning_curve.png')
-    plt.close(fig)
-
-    
-# bar chart - F1 score
-def plot_metrics_bar_chart(true_ids, preds_ids, target_names):
-
-    #classification report as dictionary
-    report = classification_report(
-        true_ids, preds_ids, target_names=target_names, output_dict=True
-    )
-
-    # report dictionary -> DataFrame 
-    # transpose, exclude final rows
-    df_report = pd.DataFrame(report).transpose().iloc[:-3]
-
-    fig, ax = plt.subplots(figsize=(10,6))
-
-    df_report[['precision', 'recall', 'f1-score']].plot(
-        kind='bar',
-        ax=ax,
-        rot=45,
-        cmap=plt.cm.PuBuGn,
-        edgecolor = 'black'
-    )
-
-    ax.set_title('Precision, Recall, F1', fontsize=14)
-    ax.set_ylabel('Score', fontsize =12)
-    ax.set_xlabel('Category', fontsize=12)
-    ax.legend(loc='lower right')
-    ax.grid(axis = 'y', linestyle = '--', alpha=0.7)
-
-    plt.tight_layout()
-    plt.savefig('per_class_metrics.png', dpi=300)
-    plt.close(fig)
-
-    

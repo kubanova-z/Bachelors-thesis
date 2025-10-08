@@ -2,7 +2,8 @@ from src.data_loader import load_data
 from src.preprocess import prepare_data
 from src.train import train_model
 from src.predict import predict_single_text
-from src.analysis import category_centroids, compare_category_similarity, intra_category_similarity
+from src.analysis import  intra_category_similarity
+from src.plotting import plot_confusion_matrix, plot_learning_curve, plot_metrics_bar_chart
 
 
 if __name__ == "__main__":
@@ -18,7 +19,7 @@ if __name__ == "__main__":
     #centroids = category_centroids(X_train, y_train, class_to_idx)
     #compare_category_similarity(centroids)
 
-    print("\n--- 3. Category Similarity Analysis (Intra-Category Cohesion) ---")
+    #print("\n--- 3. Category Similarity Analysis (Intra-Category Cohesion) ---")
     
     # Calculate and print the average similarity within each category
     intra_category_similarity(X_train, y_train, class_to_idx)

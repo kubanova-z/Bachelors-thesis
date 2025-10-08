@@ -3,46 +3,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 
-def category_centroids(X_Vec, y_labels, class_to_idx):
-    #mean TF-IDF vector for each category
-
-    df_temp = pd.DataFrame(y_labels).rename(columns={y_labels.name: 'Category'})
-    df_temp = df_temp.reset_index(drop=True)
-    centroids = {}
-
-    for category in class_to_idx.keys():
-        index = df_temp[df_temp['Category'] == category].index
-        category_vectors = X_Vec[index]
-        centroid = category_vectors.mean(axis = 0)
-        centroids[category] = centroid
-    return centroids
-
-def compare_category_similarity(centroids):
-    #cosine similarity matrix for categories
-
-    categories = list(centroids.keys())
-    centroid_vectors = [centroids[cat].A.squeeze().reshape(1,-1) for cat in categories]
-    
-    X_matrix = np.vstack(centroid_vectors)
-    similarity_matrix = cosine_similarity(X_matrix)
-
-    df_similarity = pd.DataFrame(
-        similarity_matrix,
-        index=categories,
-        columns=categories
-
-    )
-
-    print("\n" + "="*50)
-    print("CATEGORY COSINE SIMILARITY MATRIX")
-    print("="*50)
-    print(df_similarity.round(4))
-    
-    return df_similarity
-
-
 def intra_category_similarity(X_vec, y_labels, class_to_idx):
     #X_vec = matrix of vectors
+
+    #pd.DataFrame - data structure
     df_temp = pd.DataFrame(y_labels).rename(columns={y_labels.name: 'Category'})
     df_temp = df_temp.reset_index(drop=True)
     #drop = True -> each index starts from 0
@@ -50,7 +14,7 @@ def intra_category_similarity(X_vec, y_labels, class_to_idx):
     intra_similarity_score = {}
 
     print("\n" + "="*50)
-    print("AVERAGE INTRA-CATEGORY SIMILARITY")
+    print("CATEGORY COSINE SIMILARITY")
     print("="*50)
 
     #loop for each category
@@ -90,3 +54,61 @@ def intra_category_similarity(X_vec, y_labels, class_to_idx):
 
     return intra_similarity_score
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+""" def category_centroids(X_Vec, y_labels, class_to_idx):
+    #mean TF-IDF vector for each category
+
+    df_temp = pd.DataFrame(y_labels).rename(columns={y_labels.name: 'Category'})
+    df_temp = df_temp.reset_index(drop=True)
+    centroids = {}
+
+    for category in class_to_idx.keys():
+        index = df_temp[df_temp['Category'] == category].index
+        category_vectors = X_Vec[index]
+        centroid = category_vectors.mean(axis = 0)
+        centroids[category] = centroid
+    return centroids
+
+def compare_category_similarity(centroids):
+    #cosine similarity matrix for categories
+
+    categories = list(centroids.keys())
+    centroid_vectors = [centroids[cat].A.squeeze().reshape(1,-1) for cat in categories]
+    
+    X_matrix = np.vstack(centroid_vectors)
+    similarity_matrix = cosine_similarity(X_matrix)
+
+    df_similarity = pd.DataFrame(
+        similarity_matrix,
+        index=categories,
+        columns=categories
+
+    )
+
+    print("\n" + "="*50)
+    print("CATEGORY COSINE SIMILARITY MATRIX")
+    print("="*50)
+    print(df_similarity.round(4))
+    
+    return df_similarity """
