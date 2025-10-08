@@ -2,6 +2,8 @@ from src.data_loader import load_data
 from src.preprocess import prepare_data
 from src.train import train_model
 from src.predict import predict_single_text
+from src.analysis import category_centroids, compare_category_similarity, intra_category_similarity
+
 
 if __name__ == "__main__":
     print("--- 1. Loading and Preparing Data ---")
@@ -12,15 +14,23 @@ if __name__ == "__main__":
     print("\n--- 2. Training Model ---")
     model, class_to_idx = train_model(X_train, y_train, X_test, y_test, epochs=30)
 
+    #print("\n--- 3. Calculating category similarity ---")
+    #centroids = category_centroids(X_train, y_train, class_to_idx)
+    #compare_category_similarity(centroids)
+
+    print("\n--- 3. Category Similarity Analysis (Intra-Category Cohesion) ---")
+    
+    # Calculate and print the average similarity within each category
+    intra_category_similarity(X_train, y_train, class_to_idx)
    
     
-    
-    # --- Interactive Manual Input (NEW FUNCTIONALITY) ---
+"""  
+    # --- Interactive Manual Input  ---
     print("\n" + "="*50)
     print("MANUAL CLASSIFICATION INPUT")
     print("="*50)
 
-    # Loop to allow continuous classification until the user quits
+    # loop for user input
     while True:
 
         user_text = input("Enter a product description (or type 'quit' to exit): ")
@@ -32,12 +42,12 @@ if __name__ == "__main__":
             print("Please enter some text.")
             continue
             
-        # Classify the user's text
+        # Classify the users text
         predicted_class_manual = predict_single_text(user_text, model, vectorizer, class_to_idx)
         
         print("\n--- CLASSIFICATION RESULT ---")
         print(f"Input Text: {user_text}")
         print(f"Predicted Category: {predicted_class_manual}\n")
 
-    print("Model testing finished.")
+    print("Model testing finished.") """
  
