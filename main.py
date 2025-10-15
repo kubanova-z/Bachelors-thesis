@@ -4,25 +4,32 @@ from src.train import train_model
 from src.predict import predict_single_text
 from src.analysis import  intra_category_similarity
 from src.plotting import plot_confusion_matrix, plot_learning_curve, plot_metrics_bar_chart
+from src.train_svm import train_SVM
 
 
 if __name__ == "__main__":
+
+    #load data
     print("--- 1. Loading and Preparing Data ---")
     df = load_data("/home/xkubanova_126831/bakalarka/e_com_dataset/data/ecommerceDataset.csv")
 
+
+    #prepare data
     X_train, X_test, y_train, y_test, vectorizer = prepare_data(df)
 
-    print("\n--- 2. Training Model ---")
-    model, class_to_idx = train_model(X_train, y_train, X_test, y_test, epochs=30)
+    #SVM MODEL
+    target_names = sorted(list(y_train.unique()))
+    svm_model = train_SVM(X_train, y_train, X_test, y_test, target_names)
 
-    #print("\n--- 3. Calculating category similarity ---")
-    #centroids = category_centroids(X_train, y_train, class_to_idx)
-    #compare_category_similarity(centroids)
 
-    #print("\n--- 3. Category Similarity Analysis (Intra-Category Cohesion) ---")
+    #NN MODEL
+    #print("\n--- 2. Training Model ---")
+    #model, class_to_idx = train_model(X_train, y_train, X_test, y_test, epochs=30)
+
+   
     
     # Calculate and print the average similarity within each category
-    intra_category_similarity(X_train, y_train, class_to_idx)
+    #intra_category_similarity(X_train, y_train, class_to_idx)
    
     
 """  

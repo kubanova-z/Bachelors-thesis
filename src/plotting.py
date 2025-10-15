@@ -5,7 +5,7 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 
 
 #CONFUSION MATRIX
-def plot_confusion_matrix(true_ids, preds_ids, target_names):
+def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
     cm = confusion_matrix(true_ids, preds_ids)
     cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
@@ -27,14 +27,15 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names):
     plt.tight_layout()
 
     #plt.show()
-    plt.savefig('confusion_matrix_results.png') 
+    filename = f'{prefix}confusion_matrix_results.png'
+    plt.savefig(filename) 
     plt.close(fig) 
     
     
 
 
 #LEARNING CURVE
-def plot_learning_curve(epochs, train_loss, test_acc):
+def plot_learning_curve(epochs, train_loss, test_acc, prefix=''):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,5))
     epoch_range = range(1, epochs+1)
 
@@ -53,13 +54,15 @@ def plot_learning_curve(epochs, train_loss, test_acc):
     ax1.legend()
     ax1.grid(True, linestyle='--', alpha=0.6)
 
+    filename = f'{prefix}learning_curve.png'
+
     plt.tight_layout()
-    plt.savefig('learning_curve.png')
+    plt.savefig(filename)
     plt.close(fig)
 
     
 # bar chart - F1 score
-def plot_metrics_bar_chart(true_ids, preds_ids, target_names):
+def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
     #classification report as dictionary
     report = classification_report(
@@ -86,8 +89,10 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names):
     ax.legend(loc='lower right')
     ax.grid(axis = 'y', linestyle = '--', alpha=0.7)
 
+
+    filename = f'{prefix}per_class_metrics.png'
     plt.tight_layout()
-    plt.savefig('per_class_metrics.png', dpi=300)
+    plt.savefig(filename, dpi=300)
     plt.close(fig)
 
     

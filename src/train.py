@@ -122,13 +122,13 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
     """ plotting """
 
     #plot confusion matrix
-    plot_confusion_matrix(true_ids, preds_ids, target_names)
+    plot_confusion_matrix(true_ids, preds_ids, target_names, prefix='nn_')
 
     #plot learning curve
-    plot_learning_curve(epochs, train_loss_history,test_acc_history)
+    plot_learning_curve(epochs, train_loss_history,test_acc_history, prefix='nn_')
 
     #plot metrics bar chart
-    plot_metrics_bar_chart(true_ids, preds_ids, target_names)
+    plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix='nn_')
 
     return model, class_to_idx
 
