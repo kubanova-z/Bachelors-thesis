@@ -43,7 +43,10 @@ class TextClassifier(nn.Module):
         
 #set up the model, train on vectorized data and evaluate
 
-def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
+def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01, hidden_dim= 256):
+    print("\n" + "="*50)
+    print("NEURAL NETWORK")
+    print("="*50)
     #sparse matrices (convert to pytorch float)
     X_train = torch.tensor(X_train.toarray()).float()
     X_test = torch.tensor(X_test.toarray()).float()
@@ -57,7 +60,7 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
     #initialization of text classifier
-    model = TextClassifier(X_train.shape[1], 128, len(classes))
+    model = TextClassifier(X_train.shape[1], hidden_dim, len(classes))
     #loss function
     criterion = nn.CrossEntropyLoss()
     #optimizer
@@ -78,7 +81,8 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
         loss.backward() #backward pass - algoritmus spatneho sirenia chyby
         optimizer.step()    #update model weights based on gradients
         train_loss_history.append(loss.item())  #trauning loss
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
+        #if(epoch % 10 == 0):
+        #    print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
 
         #test accuracy check
         with torch.no_grad():
@@ -86,7 +90,7 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
             preds = model(X_test).argmax(dim=1) #predicted ids
             acc = (preds == y_test).float().mean().item()   #accuracy (correct / total samples)
             test_acc_history.append(acc)
-            print(f'Test accuracy: {acc:.4f}')
+    print(f'Test accuracy: {acc:.4f}')
 
     #final accuracy check after all epochs
     with torch.no_grad():
@@ -117,7 +121,7 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01):
         digits = 4
     )
     #accuracy report
-    #print(report)
+    print(report)
 
     """ plotting """
 

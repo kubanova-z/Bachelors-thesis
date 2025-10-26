@@ -5,6 +5,7 @@ from src.predict import predict_single_text
 from src.analysis import  intra_category_similarity
 from src.plotting import plot_confusion_matrix, plot_learning_curve, plot_metrics_bar_chart
 from src.train_svm import train_SVM
+from src.train_rf import train_random_forest
 
 
 if __name__ == "__main__":
@@ -20,6 +21,9 @@ if __name__ == "__main__":
     #SVM MODEL
     target_names = sorted(list(y_train.unique()))
     svm_model = train_SVM(X_train, y_train, X_test, y_test, target_names)
+
+    #RANDOM FOREST
+    rf_model = train_random_forest(X_train, y_train, X_test, y_test, target_names)
 
 
     #NN MODEL
