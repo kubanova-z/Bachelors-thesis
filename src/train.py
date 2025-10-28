@@ -59,6 +59,9 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01, hidden_dim=
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
+    #print sample of inputs
+    print_NN_input_sample(X_train, y_train)
+
     #initialization of text classifier
     model = TextClassifier(X_train.shape[1], hidden_dim, len(classes))
     #loss function
@@ -137,3 +140,15 @@ def train_model(X_train, y_train, X_test, y_test, epochs=5, lr=0.01, hidden_dim=
     return model, class_to_idx
 
 
+def print_NN_input_sample(X_train, y_train):
+    print(f"X_train Shape (samples, features): {X_train.shape}")
+    print(f"X_train Data Type: {X_train.dtype}")
+    print(f"y_train Shape (labels): {y_train.shape}")
+    print(f"y_train Data Type: {y_train.dtype}")
+    print(f"Feature Vector Length (input_dim): {X_train.shape[1]}")
+    print("-" * 30)
+
+    print("First sample (first 10 features):")
+    # Using .cpu().numpy() to ensure compatibility if a GPU is used, and for readability
+    print(X_train[0][:10].cpu().numpy())
+    print("-" * 30)

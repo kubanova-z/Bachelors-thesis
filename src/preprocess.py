@@ -2,6 +2,7 @@ import re   #module for text cleaning
 from sklearn.model_selection import train_test_split    #function for splitting data into test / train sets
 from sklearn.feature_extraction.text import TfidfVectorizer     #vectorizer for extraction
 
+
 """ 
 Vectorizer: text -> numerical data
 - feature extraction (converting raw text into matrix of numerical feature vectors)
@@ -44,3 +45,42 @@ def prepare_data(df, test_size = 0.2):
 
     #return vectorized features, category labels and vectorizer
     return X_train_vec, X_test_vec, y_train, y_test, vectorizer
+
+
+import pandas as pd
+
+def print_vectorized_sample():
+    sample_text = (
+        "Lovely Arts Collection Hand Embroidered Cotton Thread Skeins for Craft Projects, Multicolour (Pack of 25) -LAC97 Package includes 25 skeins,"
+        " two each of 12 colors. Each skein is 8 yards long. "
+        "This quality embroidery floss can be used in a multitude of craft projects, including needlecraft, friendship bracelets, stringing beads, and more. Non-toxic."
+        )
+    
+    cleaned_text = clean_text(sample_text)
+    vectorizer = TfidfVectorizer(max_features=5000)
+    vectorized_output = vectorizer.fit_transform([cleaned_text])
+
+    print("--- Vectorization Sample ---")
+    print(f"Shape of vectorized output (documents, features): {vectorized_output.shape}")
+    print("-" * 30)
+
+    print(" Sample has 42 words.\n"
+      " Coords (0 - we have just 1 sample, n - position of the word)\n"
+      " Value (TF-IDF score - the smaller the more important)")
+
+    sample_vector = vectorized_output[0]
+    
+    print("Vector for the sample text (sparse format):")
+    print(sample_vector)
+    
+    print("\nSame vector in dense format (array of TF-IDF scores):")
+    print(sample_vector.toarray())
+    print("-" * 30)
+    
+    feature_names = vectorizer.get_feature_names_out()
+
+    print("Features and TF-IDF scores for the sample text:")
+    for col, score in zip(sample_vector.indices, sample_vector.data):
+        print(f"  - Word: '{feature_names[col]}', Score: {score:.4f}")
+
+   
