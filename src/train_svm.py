@@ -7,6 +7,8 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names):
     print("SUPPORT VECTOR MACHINE (SVM)")
     print("="*50)
 
+    print_SVM_input(X_train, y_train)
+
     #inicializacia a trenovanie modelu
     #C relularizacny parameter (vyssie -> riziko overfittingu, nizsie -> viac chyb, ale vacsi margin)
     svm_model = LinearSVC(C=2.0, random_state=42, verbose= 0)
@@ -45,3 +47,27 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names):
     plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix='svm_')
 
     return svm_model
+
+
+def print_SVM_input(X_train, y_train):
+    print("\n--- SVM Model Input Data Summary ---")
+    
+    # Pre SciPy maticu používame X_train.shape
+    print(f"X_train Shape (samples, features): {X_train.shape}")
+    print(f"X_train Data Type: {X_train.dtype}")
+    
+    # Pre Pandas Series (y_train) používame .shape
+    print(f"y_train Shape (labels): {y_train.shape}")
+    print(f"y_train Data Type: {y_train.dtype}")
+    
+    print(f"Feature Vector Length (input_dim): {X_train.shape[1]}")
+    print(f"Matrix Format: {type(X_train)}")
+    print("-" * 30)
+    
+    # Pre zobrazenie TF-IDF skóre v SciPy musíme konvertovať na pole
+    sample_vector = X_train[0].toarray()[0]
+    
+    print("Prvá vzorka (prvých 10 TF-IDF hodnôt):")
+    # Vypíšeme len prvých 10 prvkov z hustého poľa (array)
+    print(sample_vector[:10]) 
+    print("-" * 30)

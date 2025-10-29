@@ -56,7 +56,21 @@ def print_vectorized_sample():
         "This quality embroidery floss can be used in a multitude of craft projects, including needlecraft, friendship bracelets, stringing beads, and more. Non-toxic."
         )
     
+    print("\n" + "="*50)
+    print("Text preprocess")
+    print("="*50)
+    
+    
+    print("--- 1. Input Sample ---")
+    print(sample_text)
+    print("-" * 30)
+
     cleaned_text = clean_text(sample_text)
+    print("--- 2. Cleaned Text (Lowercase, without interpunction / numbers) ---")
+    print(cleaned_text)
+    print(f"Count of tokens in cleaned text: {len(cleaned_text.split())}")
+    print("-" * 30)
+
     vectorizer = TfidfVectorizer(max_features=5000)
     vectorized_output = vectorizer.fit_transform([cleaned_text])
 
