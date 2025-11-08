@@ -26,10 +26,11 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
     
     plt.tight_layout()
 
-    #plt.show()
+    plt.show()
     filename = f'{prefix}confusion_matrix_results.png'
     plt.savefig(filename) 
     plt.close(fig) 
+    
     
     
 
@@ -49,16 +50,19 @@ def plot_learning_curve(epochs, train_loss, test_acc, prefix=''):
 
     ax2.plot(epoch_range, test_acc, label='Test accuracy', color='blue')
     ax2.set_title('Test accuracy per Epoch', fontsize=14)
-    ax1.set_xlabel('Epoch', fontsize=12)
-    ax1.set_ylabel('Accuracy', fontsize=12)
-    ax1.legend()
-    ax1.grid(True, linestyle='--', alpha=0.6)
+    ax2.set_xlabel('Epoch', fontsize=12)
+    ax2.set_ylabel('Accuracy', fontsize=12)
+    ax2.legend()
+    ax2.grid(True, linestyle='--', alpha=0.6)
 
     filename = f'{prefix}learning_curve.png'
 
+    plt.show()
     plt.tight_layout()
+    
     plt.savefig(filename)
     plt.close(fig)
+    
 
     
 # bar chart - F1 score
@@ -89,10 +93,12 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
     ax.legend(loc='lower right')
     ax.grid(axis = 'y', linestyle = '--', alpha=0.7)
 
+    plt.show()
 
     filename = f'{prefix}per_class_metrics.png'
     plt.tight_layout()
     plt.savefig(filename, dpi=300)
     plt.close(fig)
+    
 
     
