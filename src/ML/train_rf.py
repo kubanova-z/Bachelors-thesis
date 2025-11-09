@@ -65,8 +65,14 @@ def print_rf_input(X_train, y_train):
     print(f"Matrix Format: {type(X_train)}")
     print("-" * 30)
     
-    # Pre zobrazenie TF-IDF skóre v SciPy musíme konvertovať na pole
-    sample_vector = X_train[0].toarray()[0]
+    if hasattr(X_train[0], "toarray"):
+        # TF-IDF sparse vector
+        sample_vector = X_train[0].toarray()[0]
+        print("First sample (first 10 TF-IDF feature values):")
+    else:
+        # Dense embedding (NumPy array)
+        sample_vector = X_train[0]
+        print("First sample (first 10 embedding values):")
     
     print("Prvá vzorka (prvých 10 TF-IDF hodnôt):")
     # Vypíšeme len prvých 10 prvkov z hustého poľa (array)

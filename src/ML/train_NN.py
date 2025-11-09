@@ -1,3 +1,4 @@
+from sklearn.utils import compute_class_weight
 import torch
 import torch.nn as nn       #neural network module
 import torch.optim as optim     #optimization module
@@ -97,28 +98,62 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
         model_params = {}
 
   
+    # convert inputs to PyTorch tensors - tp be able to handle both TF-IDF and embeddings
+
+    if hasattr(X_train, "toarray"): # TF-IDF
+        X_train_tensor = torch.tensor(X_train.toarray()).float()
+    else:   #embedding
+        X_train_tensor = torch.tensor(X_train).float()
+        
+
+    if hasattr(X_test, "toarray"): # TF-IDF
+        X_test_tensor = torch.tensor(X_test.toarray()).float()
+    else:   #embedding
+        X_test_tensor = torch.tensor(X_test).float()
+
+
+
 
     #sparse matrices (convert to pytorch float)
-    X_train = torch.tensor(X_train.toarray()).float()
-    X_test = torch.tensor(X_test.toarray()).float()
+    if hasattr(X_train, "toarray"):  # e.g. TF-IDF sparse matrix
+        X_train = torch.tensor(X_train.toarray()).float()
+    else:  # e.g. Word2Vec numpy array
+        X_train = torch.tensor(X_train).float()
+
+    if hasattr(X_test, "toarray"):
+        X_test = torch.tensor(X_test.toarray()).float()
+    else:
+        X_test = torch.tensor(X_test).float()
 
     # cotegories -> integers
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
 
+    class_weights = compute_class_weight(
+        class_weight='balanced',
+        classes=np.array(classes),
+        y=y_train.values   # convert tensor to numpy array
+    )
+    class_weights = torch.tensor(class_weights, dtype=torch.float32)
+    print("Class weights:", class_weights)
+
+
     #training and test category labels (panda series) - map to correct ids
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
+   
     #print sample of inputs
-    print_NN_input_sample(X_train, y_train)
+    #print_NN_input_sample(X_train, y_train)
 
     #initialization of text classifier - used model
+    input_dim = X_train_tensor.shape[1]
     output_dim = len(class_to_idx)
+    
 
-    model = model_class(X_train.shape[1], output_dim=output_dim, **model_params)
+    model = model_class(input_dim, output_dim=output_dim, **model_params)
     #loss function
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
     #optimizer
     optimizer = optim.Adam(model.parameters(), lr=lr)
 

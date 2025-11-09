@@ -41,7 +41,7 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names):
     true_ids = y_test.map(class_to_idx).values
     preds_ids = pd.Series(preds_labels).map(class_to_idx).values
     
-    from .plotting import plot_confusion_matrix, plot_metrics_bar_chart
+    from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
     
     plot_confusion_matrix(true_ids, preds_ids, target_names, prefix='svm_')
     plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix='svm_')
@@ -64,10 +64,18 @@ def print_SVM_input(X_train, y_train):
     print(f"Matrix Format: {type(X_train)}")
     print("-" * 30)
     
-    # Pre zobrazenie TF-IDF skóre v SciPy musíme konvertovať na pole
-    sample_vector = X_train[0].toarray()[0]
+  
     
-    print("Prvá vzorka (prvých 10 TF-IDF hodnôt):")
+    if hasattr(X_train[0], "toarray"):  
+        # TF-IDF sparse vector
+        sample_vector = X_train[0].toarray()[0]
+        print("First sample (first 10 TF-IDF feature values):")
+    else:
+        # Dense embedding (NumPy array)
+        sample_vector = X_train[0]
+        print("First sample (first 10 embedding values):")
+
+    
     # Vypíšeme len prvých 10 prvkov z hustého poľa (array)
     print(sample_vector[:10]) 
     print("-" * 30)
