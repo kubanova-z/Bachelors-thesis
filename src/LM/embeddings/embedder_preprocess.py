@@ -13,7 +13,6 @@ nltk.download('punkt', quiet=True)
 
 
 def load_data(path: str):
-    """Loads a labeled text dataset from CSV and prints sample rows."""
     df = pd.read_csv(path, names=["Category", "Text"], header=None)
     print("Dataset shape:", df.shape)
 
@@ -41,21 +40,31 @@ def clean_text(text):
     return text
 
 
-# nacitanie predtrenovaneho word2vec modelu
+# nacitanie predtrenovaneho word2vec modelu cez api
 def load_word2vec_model():
     print("Loading pretrained Word2Vec model from gensim…")
-    model = api.load("word2vec-google-news-300")  # ~1.6 GB, loads once
+    model = api.load("word2vec-google-news-300")
     print("Model loaded")
     return model
 
 
-# text -> embeddingy
+# text -> embeddingy - cele vety
 def text_to_vector(text, model):
-    words = word_tokenize(text.lower())
-    valid_words = [w for w in words if w in model.key_to_index]
+    words = word_tokenize(text)
+    valid_words = [w for w in words if w in model.key_to_index] # iba slova ktore existuju v slovniku Word2Vec
     if not valid_words:
-        return np.zeros(model.vector_size)
-    return np.mean(model[valid_words], axis=0)
+        return np.zeros(model.vector_size) # slova ktore word2vec neobsahuje -> nulove vektory
+    return np.mean(model[valid_words], axis=0) # priemer embeddingov slov -> embedding vety
+
+
+# text -> embedding - len pre slova
+def text_to_vector_word(text, model):
+    words = word_tokenize(text)
+    valid_words = [w for w in words if w in model.key_to_index] # iba slova ktore existuju v slovniku Word2Vec
+    if not valid_words:
+        return np.zeros(model.vector_size) # slova ktore word2vec neobsahuje -> nulove vektory
+    return model[valid_words[0]]
+
 
 
 # rozdelenie dat na train test
@@ -82,14 +91,11 @@ def prepare_data_word2vec(df, test_size=0.2):
     return X_train_vec, X_test_vec, y_train, y_test, model
 
 
-""" Bert embedder"""
+""" MiniLM embedder"""
 
 # nacitanie predtrenovaneho word2vec modelu
-def load_bert_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu"):
-    """
-    Load a pretrained BERT-based embedding model from Hugging Face.
-    Returns a tuple (tokenizer, model).
-    """
+def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu"):
+  
    
     print(f"Loading pretrained BERT model '{model_name}' from Hugging Face…")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -100,7 +106,7 @@ def load_bert_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", devi
     return tokenizer, model
 
 # text -> embeddingy
-def text_to_vector_bert(text, tokenizer, model, device="cpu"):
+def text_to_vector_minilm(text, tokenizer, model, device="cpu"):
     
     # Tokenize the sentence
     inputs = tokenizer(
@@ -124,7 +130,7 @@ def text_to_vector_bert(text, tokenizer, model, device="cpu"):
 
 
 # rozdelenie dat na train test
-def prepare_data_bert(df, tokenizer, model, test_size=0.2, device="cpu", batch_size = 32):
+def prepare_data_minilm(df, tokenizer, model, test_size=0.2, device="cpu", batch_size = 32):
     
     # Clean text
     df["Text"] = df["Text"].apply(clean_text)
@@ -135,8 +141,8 @@ def prepare_data_bert(df, tokenizer, model, test_size=0.2, device="cpu", batch_s
     )
 
     # Convert to embeddings
-    X_train_vec = text_to_vectors_bert_batch(list(X_train_text), tokenizer, model, device=device, batch_size=batch_size)
-    X_test_vec  = text_to_vectors_bert_batch(list(X_test_text),  tokenizer, model, device=device, batch_size=batch_size)
+    X_train_vec = text_to_vectors_minilm_batch(list(X_train_text), tokenizer, model, device=device, batch_size=batch_size)
+    X_test_vec  = text_to_vectors_minilm_batch(list(X_test_text),  tokenizer, model, device=device, batch_size=batch_size)
 
     return X_train_vec, X_test_vec, y_train.reset_index(drop=True), y_test.reset_index(drop=True)
 
@@ -144,20 +150,18 @@ def prepare_data_bert(df, tokenizer, model, test_size=0.2, device="cpu", batch_s
 
 
 
-from tqdm import tqdm
+from tqdm import tqdm 
 
-def text_to_vectors_bert_batch(texts, tokenizer, model, device="cpu", batch_size=32):
-    """
-    Convert a list of texts into BERT embeddings in batches.
-    Returns: numpy array of shape (len(texts), hidden_size)
-    """
+def text_to_vectors_minilm_batch(texts, tokenizer, model, device="cpu", batch_size=32):
+   
     model.eval()
     all_embeddings = []
 
+    # progress bar
     for i in tqdm(range(0, len(texts), batch_size), desc="Encoding batches"):
         batch_texts = texts[i:i+batch_size]
 
-        # Tokenize the batch
+        # tokenizacia
         inputs = tokenizer(
             batch_texts,
             return_tensors="pt",
@@ -166,7 +170,7 @@ def text_to_vectors_bert_batch(texts, tokenizer, model, device="cpu", batch_size
             padding=True
         ).to(device)
 
-        # Forward pass through BERT
+        
         with torch.no_grad():
             outputs = model(**inputs)
             cls_embeddings = outputs.last_hidden_state[:, 0, :]  # [CLS] token
