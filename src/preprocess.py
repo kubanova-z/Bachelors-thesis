@@ -46,7 +46,12 @@ def prepare_data(df, test_size = 0.2):
         stratify=df["Category"]     #proportion of each category is even in test and train data
     )
 
-    vectorizer = TfidfVectorizer(max_features=5000)     #max_features = 5000 - limit vocabulary to 5000 most used words
+    #chnage for smaller dataset
+    vectorizer = TfidfVectorizer(max_features=3000,
+                                 ngram_range=(1, 2),
+                                 min_df=3,
+                                 max_df=0.9,
+                                 sublinear_tf=True)     #max_features = 5000 - limit vocabulary to 5000 most used words
     X_train_vec = vectorizer.fit_transform(X_train)     #vectorizer applied only for train data (vocabulary, weights, transform data)
     X_test_vec = vectorizer.transform(X_test)           #transform data with the vocabulary and weights learned
 
