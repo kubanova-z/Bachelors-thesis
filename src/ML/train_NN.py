@@ -69,28 +69,40 @@ class DeepTextClassifier(nn.Module):
     
 
 
-""" Recurent NN """    
-# useful just when input is embedding / tokens  
+""" Focal Loss """    
+import torch.nn.functional as F
 
-class RNNTextClassifier(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_layers = 1, dropout_rate = 0.5, rnn_type=type):
-
-        super(RNNTextClassifier, self).__init__()
-
-        if rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first = True, dropout = dropout_rate)
-        elif rnn_type == 'GRU':
-            self.rnn = nn.GRU(input_dim, hidden_dim, num_layers, batch_first = True, dropout = dropout_rate)
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=1, gamma=2, reduction='mean'):
+        super(FocalLoss, self).__init__()
+        if isinstance(alpha, (float, int)):
+            self.alpha = alpha
+            self.alpha_is_scalar = True
         else:
-            self.rnn = nn.RNN(input_dim, hidden_dim, num_layers, batch_first = True, nonlinearity= 'tanh')
+            self.alpha = alpha
+            self.alpha_is_scalar = False
+        self.gamma = gamma
+        self.reduction = reduction
+       
+
+    def forward(self, inputs, targets):
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        pt = torch.exp(-ce_loss)
+        if self.alpha_is_scalar:
+            alpha_factor = self.alpha
+        else:
+            # pick alpha per sample
+            alpha_factor = self.alpha[targets]  # [batch_size]
+
+        focal_loss = alpha_factor * (1 - pt) ** self.gamma * ce_loss
+
+        if self.reduction == 'mean':
+            return focal_loss.mean()
+        elif self.reduction == 'sum':
+            return focal_loss.sum()
+        else:
+            return focal_loss
     
-        self.fc = nn.Linear(hidden_dim, output_dim)
-
-    def forward(self, x):
-       output, _ = self.rnn(x)
-       last_output = output[:, -1, :]
-       return self.fc(last_output)
-
         
         
 """ Training the model with class weights""" 
@@ -669,6 +681,187 @@ def train_model_class_weights_and_sampling(X_train, y_train, X_test, y_test, mod
 
     return model, class_to_idx, acc
 
+
+def train_minilm_nn(X_train, y_train, X_test, y_test, model_class=TextClassifier, model_params = None, epochs=50, lr=1e-4, batch_size=32, boost_factor=2.0):
+    if model_params is None:
+        model_params = {}
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    #normalize embeddings
+    from sklearn.preprocessing import normalize
+    X_train = normalize(X_train)
+    X_test = normalize(X_test)
+
+    X_train = torch.tensor(X_train, dtype = torch.float32).to(device)
+    X_test = torch.tensor(X_test, dtype = torch.float32).to(device)
+
+
+    #labels
+    classes = sorted(list(set(y_train)))
+    class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
+
+    y_train = torch.tensor(y_train.map(class_to_idx).values).long().to(device)
+    y_test = torch.tensor(y_test.map(class_to_idx).values).long().to(device)
+
+    class_weights = compute_class_weight(
+        class_weight='balanced',
+        classes=np.array(classes),
+        y=y_train.cpu().numpy()   # convert tensor to numpy array
+    )
+    class_weights[1] *= boost_factor
+    class_weights = torch.tensor(class_weights, dtype=torch.float32).to(device)
+    print("Class weights:", class_weights)
+
+    # dataloaders
+    train_ds = TensorDataset(X_train, y_train)
+    test_ds = TensorDataset(X_test, y_test)
+
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+
+    #model
+    input_dim = X_train.shape[1]
+    output_dim = len(class_to_idx)
+
+    model = model_class(input_dim=X_train.shape[1], output_dim=len(class_to_idx), **model_params).to(device)
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+
+    train_loss_history = []
+    test_acc_history = []
+
+    #training
+    for epoch in range(epochs):
+        model.train()
+        epoch_loss = 0.0
+
+        for xb, yb in train_loader:
+            xb, yb = xb.to(device), yb.to(device)
+
+            optimizer.zero_grad()
+            outputs = model(xb)
+            loss = criterion(outputs, yb)
+            loss.backward()
+            optimizer.step()    
+
+            epoch_loss += loss.item() * xb.size(0)
+
+        avg_epoch_loss = epoch_loss / len(train_loader.dataset)
+        train_loss_history.append(avg_epoch_loss)
+        # print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_epoch_loss:.4f}")
+        model.eval()
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for xb, yb in test_loader:
+                xb, yb = xb.to(device), yb.to(device)
+                outputs = model(xb)
+                preds = outputs.argmax(dim=1)
+                correct += (preds == yb).sum().item()
+                total += len(yb)
+
+        test_acc = correct / total
+        test_acc_history.append(test_acc)
+
+        
+    model.eval()
+    with torch.no_grad():
+        outputs = model(X_test.to(device))
+        preds_ids = outputs.argmax(dim=1).cpu().numpy()
+
+    true_ids = y_test.cpu().numpy()
+    idx_to_class = {i: cls for cls, i in class_to_idx.items()}
+    target_names = [str(idx_to_class[i]) for i in sorted(idx_to_class.keys())]
+
+    print(classification_report(true_ids, preds_ids, target_names=[str(idx_to_class[i]) for i in range(output_dim)]))
+
+
+    plot_confusion_matrix(true_ids, preds_ids, target_names, prefix='nn_')
+
+    #plot learning curve
+    plot_learning_curve(epochs, train_loss_history,test_acc_history, prefix='nn_')
+
+    #plot metrics bar chart
+    plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix='nn_')
+
+
+    return model, class_to_idx
+
+
+def train_nn_with_focal_loss(model, train_loader, val_loader, num_epochs=10,
+                          lr=1e-3, alpha=1.0, gamma=2.0,
+                          use_scheduler=True, device="cpu"):
+    model = model.to(device)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    criterion = FocalLoss(alpha=alpha, gamma=gamma)
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor = 0.5, patience=3) if use_scheduler else None
+
+    train_losses = []
+    val_losses = []
+    val_accuracies = []
+
+    for epoch in range(num_epochs):
+        model.train()
+        total_loss = 0.0
+
+        for embeddings, labels in train_loader:
+            embeddings, labels = embeddings.to(device), labels.to(device)
+
+            optimizer.zero_grad()
+            outputs = model(embeddings)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item() 
+        avg_train_loss = total_loss / len(train_loader)
+        train_losses.append(avg_train_loss)
+       
+
+        model.eval()
+        val_loss = 0.0
+        correct = 0
+        total = 0
+        all_preds = []
+        all_labels = []
+
+        with torch.no_grad():
+            for embeddings, labels in val_loader:
+                embeddings, labels = embeddings.to(device), labels.to(device)
+                outputs = model(embeddings)
+                loss = criterion(outputs, labels)
+                val_loss += loss.item()
+
+                preds = outputs.argmax(dim=1)
+                correct += (preds == labels).sum().item()
+                total += labels.size(0)
+
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
+        
+        val_loss /= len(val_loader)
+        val_losses.append(val_loss)
+        val_accuracy = correct / total
+        val_accuracies.append(val_accuracy)
+        
+
+        if scheduler:
+            scheduler.step(val_loss)
+
+    idx_to_class = {i: str(i) for i in set(all_labels)}  # If your dataset has string labels, adjust accordingly
+    target_names = [str(idx_to_class[i]) for i in sorted(idx_to_class.keys())]
+
+
+    print("\nClassification Report:")
+    print(classification_report(all_labels, all_preds, target_names=target_names, digits=4))
+
+    plot_confusion_matrix(all_labels, all_preds, target_names, prefix='nn_')
+    plot_learning_curve(num_epochs, train_losses, val_accuracies, prefix='nn_')
+    plot_metrics_bar_chart(all_labels, all_preds, target_names, prefix='nn_')
+        
+    return model
 
 def print_NN_input_sample(X_train, y_train):
     print(f"X_train Shape (samples, features): {X_train.shape}")
