@@ -11,6 +11,7 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 from src.plotting import plot_confusion_matrix, plot_learning_curve, plot_metrics_bar_chart
 
 import pandas as pd
+import torch.nn.functional as F
 
 #feed forward neural network
 #inupt(dim) - size of the input features (5000)
@@ -70,7 +71,7 @@ class DeepTextClassifier(nn.Module):
 
 
 """ Focal Loss """    
-import torch.nn.functional as F
+""" Focal loss = pre nevyvazene datasety"""
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=1, gamma=2, reduction='mean'):
@@ -86,13 +87,16 @@ class FocalLoss(nn.Module):
        
 
     def forward(self, inputs, targets):
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
-        pt = torch.exp(-ce_loss)
-        if self.alpha_is_scalar:
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none') # cross entropy loss (vrati CE pre vzorku - batch)
+        pt = torch.exp(-ce_loss)    # konverzia CE na pravdepodobnost (s akou pravdepodobnostou je modla modelu trieda spravna)
+        if self.alpha_is_scalar:    # aplha = scalar, rovnake vahy pre vsetky triedy
             alpha_factor = self.alpha
         else:
-            # pick alpha per sample
-            alpha_factor = self.alpha[targets]  # [batch_size]
+            # alpha = tensor - balansovanie tried 
+            # triede 1 sme nastavili vyssiu vahu ako 0 triede
+            alpha_factor = self.alpha[targets]  
+
+            # gamma - fokus na tazsie vzorky
 
         focal_loss = alpha_factor * (1 - pt) ** self.gamma * ce_loss
 
@@ -115,7 +119,6 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # convert inputs to PyTorch tensors - tp be able to handle both TF-IDF and embeddings
-
     if hasattr(X_train, "toarray"): # TF-IDF
         X_train_tensor = torch.tensor(X_train.toarray()).float()
     else:   #embedding
@@ -143,18 +146,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
 
-    # class_weights = compute_class_weight(
-    #     class_weight='balanced',
-    #     classes=np.array(classes),
-    #     y=y_train.values   # convert tensor to numpy array
-    # )
-
-    # boost_factor = 1.3
-    # class_weights[1] *= boost_factor
-    # class_weights = torch.tensor(class_weights, dtype=torch.float32).to(device)
-    # print("Class weights:", class_weights)
-
-
+  
     #training and test category labels (panda series) - map to correct ids
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
@@ -173,19 +165,6 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     print("Class weights:", class_weights)
 
 
-
-
-    # class_sample_counts = np.bincount(y_train.numpy())
-    # weights = 1. / class_sample_counts
-    # sample_weights = weights[y_train.numpy()]
-
-    # sampler = WeightedRandomSampler(
-    #     weights=sample_weights,
-    #     num_samples=len(sample_weights),
-    #     replacement=True
-    # )
-
-
     batch_size = 16
 
     #dataloaders for batched training
@@ -196,19 +175,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
     
-    
-    # train_loader = DataLoader(
-    # train_ds,
-    # batch_size=batch_size,
-    # sampler=sampler,   # balance the batches
-    # )
-
-    
-
-   
-    #print sample of inputs
-    #print_NN_input_sample(X_train, y_train)
-
+  
     #initialization of text classifier - used model
     input_dim = X_train_tensor.shape[1]
     output_dim = len(class_to_idx)
@@ -253,6 +220,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
         #    print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
 
     
+    # validation after each epoch
         model.eval()    #set to evaluation mode (disable dropout)
         correct = 0
         total = 0
@@ -268,6 +236,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
         acc = correct / total
         test_acc_history.append(acc)
 
+# final evaluation
     model.eval()
     with torch.no_grad():
         outputs = model(X_test.to(device))
@@ -283,51 +252,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     final_acc = (preds_ids == true_ids).mean()
     print(f"Final Test Accuracy: {final_acc:.4f}")
 
-        
-#     print(f'Test accuracy: {acc:.4f}')
-
-
-
-#     #final accuracy check after all epochs
-#     with torch.no_grad():
-#         model.eval()
-
-#         X_test = X_test.to(device)
-#         y_test = y_test.to(device)
-#         # raw predictions
-#         outputs = model(X_test)
-
-#         # predicted classes ids
-#         preds_ids = outputs.argmax(dim=1).cpu().numpy()
-
-#         # true class ids
-#         true_ids = y_test.cpu().numpy()
-
-# # inverse mapping for labels / for readable report
-
-#     idx_to_class = {i: cls for cls, i in class_to_idx.items()}
-#     target_names = [str(idx_to_class[i]) for i in sorted(idx_to_class.keys())]
-
-
-#     """     print("\n" + "="*50)
-#     print("CLASSIFICATION REPORT")
-#     print("="*50) """
-
-#     # classification report
-#     report = classification_report(
-#         true_ids,
-#         preds_ids,
-#         target_names=target_names,
-#         digits = 4
-#     )
-#     #accuracy report
-#     print(report)
-
-
-#     final_preds = outputs.argmax(dim=1)
-#     acc = (final_preds == y_test).float().mean().item()
-
-#     print(f'Test accuracy: {acc:.4f}')
+ 
 
     """ plotting """
 
@@ -387,11 +312,13 @@ def train_model_sample_weights(X_train, y_train, X_test, y_test, model_class =Te
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
     # class weights fo samples
-    class_sample_counts = np.bincount(y_train.numpy())
+    class_sample_counts = np.bincount(y_train.numpy()) # number of samples in each class
     weights = 1. / class_sample_counts
-    sample_weights = weights[y_train.numpy()]
+    sample_weights = weights[y_train.numpy()] 
 
 
+    # each batch will contain samles according to computed weights
+    # class 1 should appear more frequently in batches
     sampler = WeightedRandomSampler(
         weights=sample_weights,
         num_samples=len(sample_weights),
@@ -406,6 +333,7 @@ def train_model_sample_weights(X_train, y_train, X_test, y_test, model_class =Te
     test_ds = TensorDataset(X_test, y_test)
 
 
+# shuffle is not used when sampler is provided
     train_loader = DataLoader(train_ds, batch_size=batch_size, sampler = sampler)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
     
@@ -537,18 +465,6 @@ def train_model_class_weights_and_sampling(X_train, y_train, X_test, y_test, mod
     # cotegories -> integers
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
-
-    # class_weights = compute_class_weight(
-    #     class_weight='balanced',
-    #     classes=np.array(classes),
-    #     y=y_train.values   # convert tensor to numpy array
-    # )
-
-    # boost_factor = 1.3
-    # class_weights[1] *= boost_factor
-    # class_weights = torch.tensor(class_weights, dtype=torch.float32).to(device)
-    # print("Class weights:", class_weights)
-
 
     #training and test category labels (panda series) - map to correct ids
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
@@ -704,6 +620,7 @@ def train_minilm_nn(X_train, y_train, X_test, y_test, model_class=TextClassifier
     y_train = torch.tensor(y_train.map(class_to_idx).values).long().to(device)
     y_test = torch.tensor(y_test.map(class_to_idx).values).long().to(device)
 
+# class weights + manual booster for minority class
     class_weights = compute_class_weight(
         class_weight='balanced',
         classes=np.array(classes),
@@ -753,6 +670,7 @@ def train_minilm_nn(X_train, y_train, X_test, y_test, model_class=TextClassifier
         model.eval()
         correct = 0
         total = 0
+        # evaluation after each epoch
         with torch.no_grad():
             for xb, yb in test_loader:
                 xb, yb = xb.to(device), yb.to(device)
@@ -764,7 +682,7 @@ def train_minilm_nn(X_train, y_train, X_test, y_test, model_class=TextClassifier
         test_acc = correct / total
         test_acc_history.append(test_acc)
 
-        
+    # final evaluation
     model.eval()
     with torch.no_grad():
         outputs = model(X_test.to(device))
@@ -789,9 +707,7 @@ def train_minilm_nn(X_train, y_train, X_test, y_test, model_class=TextClassifier
     return model, class_to_idx
 
 
-def train_nn_with_focal_loss(model, train_loader, val_loader, num_epochs=10,
-                          lr=1e-3, alpha=1.0, gamma=2.0,
-                          use_scheduler=True, device="cpu"):
+def train_nn_with_focal_loss(model, train_loader, val_loader, num_epochs=10, lr=1e-3, alpha=1.0, gamma=2.0, use_scheduler=True, device="cpu"):
     model = model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     criterion = FocalLoss(alpha=alpha, gamma=gamma)

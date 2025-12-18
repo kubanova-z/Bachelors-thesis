@@ -109,7 +109,11 @@ def print_SVM_input(X_train, y_train):
     print("-" * 30)
 
 
+# C - regularizacny parameter
+# velke C - maly margin, vacsi doraz na spravnu klasifikaciu, ale riziko pretrenovania
+# male C - vacsi margin, lepsia generalizacia, ale viac nespravnych klasifikacii, riziko underfittingu
 
+# otestovanie roznych hodnot C, vyberia sa ta, ktora bude mat najlepsie 'weighted F1 score' na validacnych datach
 def find_best_C(X_train, y_train, class_weight_dict):
     param_grid = {
         'C': [0.01, 0.1, 0.5, 1,2,5,10]
@@ -121,8 +125,8 @@ def find_best_C(X_train, y_train, class_weight_dict):
         max_iter=5000
     )
 
-    scorer = make_scorer(f1_score, average ='weighted')  #predtym macro
-    cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=42)
+    scorer = make_scorer(f1_score, average ='weighted')  #predtym macro (pouziva sa weighted F1 score)
+    cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=42)   # 5 fold stratified corss validation
 
     grid = GridSearchCV(
         svm,

@@ -99,7 +99,7 @@ def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", de
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
    
-    print(f"Loading pretrained BERT model '{model_name}' from Hugging Face…")
+    print(f"Loading pretrained MiniLM model '{model_name}' from Hugging Face…")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name).to(device)
    
@@ -110,7 +110,7 @@ def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", de
 # text -> embeddingy
 def text_to_vector_minilm(text, tokenizer, model, device="cpu", cache = None):
 
-    # cache
+    # cache - embeddingy ulozene v csv subore, aby sa nemuseli stale generovat nanovo
     if cache is not None:
         row = cache[(cache["text"] == text) & (cache["version"] == EMBED_CACHE_VERSION)]
         if not row.empty:
@@ -123,7 +123,7 @@ def text_to_vector_minilm(text, tokenizer, model, device="cpu", cache = None):
           text,
         return_tensors="pt",
         truncation=True,
-        max_length=128,
+        max_length=250,
         padding="max_length"
     ).to(device)
    
@@ -131,23 +131,12 @@ def text_to_vector_minilm(text, tokenizer, model, device="cpu", cache = None):
     for key in inputs:
         inputs[key] = inputs[key].to(device)
 
-    # Pass through BERT
+    # Pass through MiniLM
     with torch.no_grad():
         outputs = model(**inputs)
     cls_embedding = outputs.last_hidden_state[:, 0, :].squeeze(0)  # shape: (hidden_size,)
 
-    # return cls_embedding.cpu().numpy() 
-    # Mean Pooling
-    # last_hidden = outputs.last_hidden_state
-    # attention_mask = inputs['attention_mask']
-    
-
-    # mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden.size()).float()
-    # sum_embeddings = torch.sum(last_hidden * mask_expanded, dim=1)
-    # sum_mask = torch.clamp(mask_expanded.sum(dim=1), min=1e-9)
-    # mean_embedding = sum_embeddings / sum_mask
-
-    #vector = mean_embedding.squeeze(0).cpu().numpy()
+   # da sa pouzit aj mean pooling
 
     vector = cls_embedding.cpu().numpy()
 
@@ -160,8 +149,6 @@ def text_to_vector_minilm(text, tokenizer, model, device="cpu", cache = None):
         }
         cache.loc[len(cache)] = new_row
         
-
-    
 
     return vector
 
