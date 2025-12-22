@@ -4,7 +4,9 @@ from torch.utils.data import DataLoader, Dataset
 from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
 import torch.nn.functional as F
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+
+
 import matplotlib.pyplot as plt
 
 import torch.nn as nn
@@ -104,7 +106,7 @@ def train_model(model, train_loader, epochs = 5, lr = 2e-5, use_focal_loss = Tru
     if use_focal_loss:
         criterion = FocalLoss(
             alpha=class_weights,
-            gamma=2,
+            gamma=2.5,
         )
     else:
         criterion = nn.CrossEntropyLoss(weight=class_weights)
@@ -139,9 +141,13 @@ def train_model(model, train_loader, epochs = 5, lr = 2e-5, use_focal_loss = Tru
 # classification report
 
 
+
+
 def evaluate_model(model, test_loader, label_names = None):
     model.eval()
     preds, labels, probs = [], [], []
+
+    
 
 
     with torch.no_grad(): # vypnutie vypoctu gradientu (rychlejsie) - uzitocne pocas trenovania
@@ -151,12 +157,25 @@ def evaluate_model(model, test_loader, label_names = None):
 
             probabilities = F.softmax(outputs.logits, dim=1)[:, 1].cpu().numpy()
             #predictions = outputs.logits.argmax(dim=1).cpu().numpy()    # vybratie indexu s najvacsou pravdepodobnostou pre kazdu triedu
-            predictions = (probabilities > 0.6).astype(int)
+           
 
-
-            preds.extend(predictions)
             probs.extend(probabilities)
             labels.extend(batch['labels'].numpy())
+    labels = np.array(labels)
+    probs = np.array(probs)
+
+    precision, recall, thresholds = precision_recall_curve(labels, probs)
+
+    f1_scores = 2 * precision * recall / (precision + recall + 1e-8)
+    best_idx = np.argmax(f1_scores[:-1])
+
+    best_threshold = thresholds[best_idx]
+    best_f1 = f1_scores[best_idx]
+
+    print(f"Best threshold (F1-optimal): {best_threshold:.3f}")
+    print(f"Best F1 score: {best_f1:.3f}")
+
+    preds = (probs >= best_threshold).astype(int)
 
             # preds_batch = outputs.logits.argmax(dim=1).cpu().numpy()    # vybratie indexu s najvacsou pravdepodobnostou pre kazdu triedu
             # preds.extend(preds_batch)
@@ -183,6 +202,18 @@ def evaluate_model(model, test_loader, label_names = None):
     plt.ylabel('True Positive Rate')
     plt.title('Receiver Operating Characteristic (ROC) Curve')
     plt.legend(loc="lower right")
+    plt.show()
+
+    precision, recall, _ = precision_recall_curve(labels, probs)
+    pr_auc = average_precision_score(labels, probs)
+
+    plt.figure()
+    plt.plot(recall, precision, lw=2, label=f'PR curve (AP = {pr_auc:.2f})')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision–Recall Curve')
+    plt.legend(loc='lower left')
+    plt.grid(True)
     plt.show()
 
 """ Single text prediction """
