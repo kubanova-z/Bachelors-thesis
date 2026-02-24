@@ -19,7 +19,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu" # GPU, ked je dostupne, 
 model_name = "gerulata/slovakbert"
 NUM_CLASSES = 2
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False) # pouzitie standardneho tokenizeru (nie fast) - kompatibilita so slovakBERTom
 
 
 
@@ -261,3 +261,81 @@ def predict_sentence(text, model, tokenizer, target_names, device = 'cuda', max_
     pred_label = target_names[pred_idx]
 
     return pred_label
+
+
+
+
+def merge_subtokens(tokens, attentions):
+    merged_tokens = []
+    merged_attn = []
+
+    current_word = ""
+    current_attn = 0.0
+
+    for token, attn in zip(tokens, attentions):
+        # skip special tokens
+        if token in ["[CLS]", "[SEP]", "[PAD]"]:
+            continue
+
+        if token.startswith("##"):
+            current_word += token[2:]
+            current_attn += attn
+        else:
+            if current_word != "":
+                merged_tokens.append(current_word)
+                merged_attn.append(current_attn)
+
+            current_word = token
+            current_attn = attn
+
+    # append last word
+    if current_word != "":
+        merged_tokens.append(current_word)
+        merged_attn.append(current_attn)
+
+    return merged_tokens, merged_attn
+
+def plot_cls_heatmap(text, model, tokenizer, device, layer=-1, max_length=256):
+
+    model.eval()
+
+    encoding = tokenizer(
+        text,
+        truncation=True,
+        padding='max_length',
+        max_length=max_length,
+        return_tensors='pt'
+    )
+
+    encoding = {k: v.to(device) for k, v in encoding.items()}
+
+    with torch.no_grad():
+        outputs = model(**encoding, output_attentions=True)
+
+    attentions = outputs.attentions[layer]  # [1, heads, seq, seq]
+
+    # CLS attention
+    cls_attn = attentions[0, :, 0, :]  # [heads, seq]
+    cls_attn = cls_attn.mean(dim=0).cpu().numpy()
+
+    tokens = tokenizer.convert_ids_to_tokens(encoding['input_ids'][0])
+
+    # normalize
+    cls_attn = cls_attn / cls_attn.sum()
+
+    # merge subwords
+    words, word_attn = merge_subtokens(tokens, cls_attn)
+
+    # normalize again after merging
+    word_attn = np.array(word_attn)
+    word_attn = word_attn / word_attn.sum()
+
+    # plot
+    plt.figure(figsize=(16, 2))
+    plt.imshow([word_attn], aspect="auto")
+    plt.yticks([])
+    plt.xticks(range(len(words)), words, rotation=90)
+    plt.colorbar(label="Attention Weight")
+    plt.title("CLS Attention Heatmap (Last Layer)")
+    plt.tight_layout()
+    plt.show()
