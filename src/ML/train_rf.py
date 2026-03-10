@@ -36,8 +36,8 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     #n_estimators = pocet stromov
     #n_jobs = pouzitie dostupnych jadier procesora, aby bol trening rychlejsi
     param_grid = {
-        'n_estimators': [50, 100, 200], # max hlbka stromu (None = unlimited)
-        'max_depth': [None, 5, 10, 20],
+        'n_estimators': [100, 100], # max hlbka stromu (None = unlimited)
+        'max_depth': [None, 10, 20],
         'min_samples_split': [2, 5, 10],
         'min_samples_leaf': [1, 2, 4]
     }
@@ -48,7 +48,7 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     n_estimators=100,
     random_state=42,
     n_jobs=-1, # vsetky CPU pre rychlejsi trening
-    class_weight='balanced_subsample',  # vypoet vah pre kazdy strom samostatne (bue pre cely dataset)
+    class_weight=class_weight_dict,  # vypoet vah pre kazdy strom samostatne (bue pre cely dataset)
     verbose=0
 )
 
@@ -62,7 +62,7 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     print(f"\nBest Random Forest parameters found via StratifiedKFold: {grid.best_params_}")
 
 
-    best_rf.fit(X_train, y_train)
+    
 
     # predikcia na testovacich datach  
     # teraz nepouzivam gridsearch
@@ -87,7 +87,7 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     plot_confusion_matrix(true_ids, preds_ids, target_names, prefix='rf_')
     plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix='rf_')
 
-    return best_rf
+    return best_rf, preds_ids, true_ids
 
 
 

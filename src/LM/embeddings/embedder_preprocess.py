@@ -103,7 +103,7 @@ def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", de
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name).to(device)
    
-    #model.eval()
+   
     print("Minilm embedder loaded on device:", device)
     return tokenizer, model
 
@@ -118,7 +118,7 @@ def text_to_vector_minilm(text, tokenizer, model, device="cpu", cache = None):
 
 
     
-    # Tokenize the sentence
+    # tokenizacia vety
     inputs = tokenizer(
           text,
         return_tensors="pt",
@@ -131,16 +131,16 @@ def text_to_vector_minilm(text, tokenizer, model, device="cpu", cache = None):
     for key in inputs:
         inputs[key] = inputs[key].to(device)
 
-    # Pass through MiniLM
+    # forward pass cez miniLM
     with torch.no_grad():
         outputs = model(**inputs)
-    cls_embedding = outputs.last_hidden_state[:, 0, :].squeeze(0)  # shape: (hidden_size,)
+    cls_embedding = outputs.last_hidden_state[:, 0, :].squeeze(0)  
 
    # da sa pouzit aj mean pooling
 
     vector = cls_embedding.cpu().numpy()
 
-    #save to cache
+    #save to cache (ak to z nej nebolo)
     if cache is not None:
         new_row = {
             "text": text,
@@ -176,6 +176,7 @@ def prepare_data_minilm_simple(df, tokenizer, model, test_size=0.2, device="cpu"
     # X_train_vec = text_to_vectors_minilm_batch(list(X_train_text), tokenizer, model, device=device, batch_size=batch_size)
     # X_test_vec  = text_to_vectors_minilm_batch(list(X_test_text),  tokenizer, model, device=device, batch_size=batch_size)
 
+    # konverzia textu na embeddingy
     X_train_vec = np.array([text_to_vector_minilm(text, tokenizer, model, device, cache).flatten()
                         for text in X_train_text])
     X_test_vec  = np.array([text_to_vector_minilm(text, tokenizer, model, device, cache).flatten()

@@ -2,6 +2,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.svm import LinearSVC
 from sklearn.metrics import classification_report, f1_score, make_scorer
 from sklearn.utils.class_weight import compute_class_weight
+from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
 import pandas as pd
 import numpy as np
 
@@ -69,12 +70,12 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names, boost_factor = 1.0
     true_ids = y_test.map(class_to_idx).values
     preds_ids = pd.Series(preds_labels).map(class_to_idx).values
     
-    from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
+   
     
     plot_confusion_matrix(true_ids, preds_ids, target_names, prefix='svm_')
     plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix='svm_')
 
-    return svm_model
+    return svm_model, preds_ids, true_ids
 
 
 def print_SVM_input(X_train, y_train):
