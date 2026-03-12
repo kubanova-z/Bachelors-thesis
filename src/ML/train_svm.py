@@ -128,6 +128,8 @@ def find_best_C(X_train, y_train, class_weight_dict):
 
     scorer = make_scorer(f1_score, average ='weighted')  #predtym macro (pouziva sa weighted F1 score)
     cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=42)   # 5 fold stratified corss validation
+    # train data split into 5 equal parts (folds) - model is trained and evaluated 5 times, each time using a different fold as the validation set and the remaining 4 folds as the training set. StratifiedKFold ensures that the class distribution is preserved in each fold, which is important for imbalanced datasets.
+    # stratified - folds preserves class ratio of dataset
 
     grid = GridSearchCV(
         svm,

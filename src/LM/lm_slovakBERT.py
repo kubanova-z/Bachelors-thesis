@@ -34,7 +34,7 @@ model.to(device)
 # freezing vrstiev
 for name, param in model.named_parameters():
     if name.startswith("bert.embeddings") or name.startswith("bert.encoder.layer.0"): # prvych par vrstiev zamrzneme
-        param.requires_grad = False # zamrznutie vrstvy - nebudu sa trenovat
+        param.requires_grad = False # zamrznutie vrstvy - nebudu sa trenovat (prevencia overfittingu, rychlejsi trening)
 
 
 
@@ -82,6 +82,7 @@ def create_dataloaders(X_train, y_train, X_test, y_test, batch_size = 16):
     # class weights
     class_weights = compute_class_weight(class_weight='balanced', classes=np.unique(y_train), y=y_train)
     sample_weights = class_weights[y_train]
+    # sampler - zabezpeci, ze vzorky z mensieho triedy budu castejsie zahrnute do batchov
     sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
 
 
@@ -127,7 +128,7 @@ def train_model(model, train_loader, epochs = 4, lr = 1e-5, use_focal_loss = Tru
     if use_focal_loss:
         criterion = FocalLoss(
             alpha=class_weights,
-            gamma=2.5,
+            gamma=2.5,  # vacsi focus na tazsie vzorky
         )
     else:
         criterion = nn.CrossEntropyLoss(weight=class_weights)
@@ -185,9 +186,18 @@ def evaluate_model(model, test_loader, label_names = None):
     labels = np.array(labels)
     probs = np.array(probs)
 
+
+    # treshold optimization
+    # default = 0,5 (ak pravdepodobnost pre triedu 1 > 0.5 -> predikuj tridu 1)
+    # pri nevyvazenych datasetoch moze byt treshold nizsi
+
+    # high treshold - high precision, low recall (ak predikujeme tridu, je to velmi pravdepodobne spravne, ale neodhalime vela vzoriek)
+    # low treshold - high recall, low precision
+
+    # PR curve (vypocita precision aj recall pri kazdom tresholde) - hlada optimalny pre F1 skore
     precision, recall, thresholds = precision_recall_curve(labels, probs)
 
-    f1_scores = 2 * precision * recall / (precision + recall + 1e-8)
+    f1_scores = 2 * precision * recall / (precision + recall + 1e-8) # harmonicky priemer precision a recall (1e-8 pre prevenciu deleni nulou)
     best_idx = np.argmax(f1_scores[:-1])
 
     best_threshold = thresholds[best_idx]
@@ -237,6 +247,14 @@ def evaluate_model(model, test_loader, label_names = None):
     plt.grid(True)
     plt.show()
 
+    from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
+
+    true_ids = labels.astype(int)
+    pred_ids = preds.astype(int)
+
+    plot_confusion_matrix(true_ids, pred_ids, label_names, prefix='bert_')
+    plot_metrics_bar_chart(true_ids, pred_ids, label_names, prefix='bert_')
+
 """ Single text prediction """
 
 def predict_sentence(text, model, tokenizer, target_names, device = 'cuda', max_length = 128):
@@ -264,7 +282,8 @@ def predict_sentence(text, model, tokenizer, target_names, device = 'cuda', max_
 
 
 
-
+# tokenizer wordpiece - rozdelenie slov na subslova (napr. "nepochopenie" -> "ne", "##pochopenie") - zlepsuje generalizaciu modelu, ale komplikuje interpretaciu pozornosti
+# rozdelene slova treba znova spojit dokopy, aby sa dlai interpretovat
 def merge_subtokens(tokens, attentions):
     merged_tokens = []
     merged_attn = []
