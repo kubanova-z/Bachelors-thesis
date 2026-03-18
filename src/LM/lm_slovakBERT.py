@@ -198,19 +198,44 @@ def evaluate_model(model, test_loader, label_names = None):
     precision, recall, thresholds = precision_recall_curve(labels, probs)
 
     f1_scores = 2 * precision * recall / (precision + recall + 1e-8) # harmonicky priemer precision a recall (1e-8 pre prevenciu deleni nulou)
-    best_idx = np.argmax(f1_scores[:-1])
+    
+    # maximalne F1 skore (bez posledneho tresholdu, ktory je mimo rozsahu pravdepodobnosti)
+    best_idx_f1 = np.argmax(f1_scores[:-1])
 
-    best_threshold = thresholds[best_idx]
-    best_f1 = f1_scores[best_idx]
+    best_threshold_f1 = thresholds[best_idx_f1]
+    best_f1 = f1_scores[best_idx_f1]
 
-    print(f"Best threshold (F1-optimal): {best_threshold:.3f}")
-    print(f"Best F1 score: {best_f1:.3f}")
+    print(f"Best threshold (F1-optimal): {best_threshold_f1:.3f}")
+    print(f"Best F1 score: {best_f1:.3f}| Precision: {precision[best_idx_f1]:.3f} | Recall: {recall[best_idx_f1]:.3f}")
 
-    preds = (probs >= best_threshold).astype(int)
+
+    
+    # maximalny recall
+    min_precision = 0.5 # minimalna akceptovatelna precision
+
+    valid_mask = precision[:-1] >= min_precision
+    if valid_mask.any():
+        valid_recalls = np.where(valid_mask, recall[:-1], 0)
+        best_idx_recall = np.argmax(valid_recalls)
+        best_threshold_recall = thresholds[best_idx_recall]
+
+        print(f"\nRecall-optimal threshold: {best_threshold_recall:.3f}")
+        print(f"F1: {f1_scores[best_idx_recall]:.3f} | Precision: {precision[best_idx_recall]:.3f} | Recall: {recall[best_idx_recall]:.3f}")
+    else:
+        print(f"No valid threshold found with Precision >= {min_precision}")
+        best_threshold_recall = best_threshold_f1  # fallback na F1-optimal threshold
+
+
+    # vyber strategie (f1 alebo recall)
+    best_treshold = best_threshold_recall
+
+
+    preds = (probs >= best_treshold).astype(int)
 
             # preds_batch = outputs.logits.argmax(dim=1).cpu().numpy()    # vybratie indexu s najvacsou pravdepodobnostou pre kazdu triedu
             # preds.extend(preds_batch)
             # labels.extend(batch['labels'].numpy())
+
 
     if label_names is not None:
         label_names = [str(x) for x in label_names]
