@@ -331,6 +331,9 @@ def train_model(
             #print(f"Epoch {epoch+1}/{epochs} | Loss: {train_loss:.4f} | Acc: {acc:.4f} | LR: {current_lr:.6f}")
 
 
+    
+
+
     return model, class_to_idx, preds, labels, train_losses, test_accs
 
 

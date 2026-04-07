@@ -1,5 +1,5 @@
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, f1_score, make_scorer
+from sklearn.metrics import classification_report, f1_score, make_scorer, recall_score
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.utils.class_weight import compute_class_weight
 from imblearn.ensemble import BalancedRandomForestClassifier
@@ -54,7 +54,9 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     verbose=0
 )
 
-    scorer = make_scorer(f1_score, average='macro')
+    # hladat optimalne f1 skore alebo maximalizovat recall pre minoritnu triedu (1)
+    #scorer = make_scorer(f1_score, average='macro')
+    scorer = make_scorer(recall_score, pos_label=1)
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     grid = GridSearchCV(rf_model, param_grid, scoring=scorer, cv=cv, n_jobs=-1, verbose=1)
@@ -121,3 +123,6 @@ def print_rf_input(X_train, y_train):
     # Vypíšeme len prvých 10 prvkov z hustého poľa (array)
     print(sample_vector[:10]) 
     print("-" * 30)
+
+
+

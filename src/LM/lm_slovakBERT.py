@@ -11,6 +11,7 @@ from sklearn.metrics import (
     roc_curve, auc,
     precision_recall_curve, average_precision_score
 )
+from src.plotting import plot_precision_recall_curve, plot_roc_curve
 
 """  Model initialization """
 
@@ -244,34 +245,6 @@ def evaluate_model(model, test_loader, label_names = None):
     from sklearn.metrics import classification_report
     print(classification_report(labels, preds, target_names=label_names))
 
-    # ROC curve + AUC (area under curve)
-
-    fpr, tpr, _ = roc_curve(labels, probs)
-    roc_auc = auc(fpr, tpr)
-
-    plt.figure()
-    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
-    plt.legend(loc="lower right")
-    plt.show()
-
-    precision, recall, _ = precision_recall_curve(labels, probs)
-    pr_auc = average_precision_score(labels, probs)
-
-    plt.figure()
-    plt.plot(recall, precision, lw=2, label=f'PR curve (AP = {pr_auc:.2f})')
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.title('Precision–Recall Curve')
-    plt.legend(loc='lower left')
-    plt.grid(True)
-    plt.show()
-
     from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
 
     true_ids = labels.astype(int)
@@ -279,6 +252,44 @@ def evaluate_model(model, test_loader, label_names = None):
 
     plot_confusion_matrix(true_ids, pred_ids, label_names, prefix='bert_')
     plot_metrics_bar_chart(true_ids, pred_ids, label_names, prefix='bert_')
+
+    plot_roc_curve(labels, probs, prefix='bert_')
+    plot_precision_recall_curve(labels, probs, prefix='bert_')
+    # ROC curve + AUC (area under curve)
+
+    # fpr, tpr, _ = roc_curve(labels, probs)
+    # roc_auc = auc(fpr, tpr)
+
+    # plt.figure()
+    # plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+    # plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    # plt.xlim([0.0, 1.0])
+    # plt.ylim([0.0, 1.05])
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+    # plt.title('Receiver Operating Characteristic (ROC) Curve')
+    # plt.legend(loc="lower right")
+    # plt.show()
+
+    # precision, recall, _ = precision_recall_curve(labels, probs)
+    # pr_auc = average_precision_score(labels, probs)
+
+    # plt.figure()
+    # plt.plot(recall, precision, lw=2, label=f'PR curve (AP = {pr_auc:.2f})')
+    # plt.xlabel('Recall')
+    # plt.ylabel('Precision')
+    # plt.title('Precision–Recall Curve')
+    # plt.legend(loc='lower left')
+    # plt.grid(True)
+    # plt.show()
+
+    # from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
+
+    # true_ids = labels.astype(int)
+    # pred_ids = preds.astype(int)
+
+    # plot_confusion_matrix(true_ids, pred_ids, label_names, prefix='bert_')
+    # plot_metrics_bar_chart(true_ids, pred_ids, label_names, prefix='bert_')
 
 """ Single text prediction """
 

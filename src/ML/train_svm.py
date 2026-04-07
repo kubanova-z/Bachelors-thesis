@@ -1,6 +1,6 @@
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.svm import LinearSVC
-from sklearn.metrics import classification_report, f1_score, make_scorer
+from sklearn.metrics import classification_report, f1_score, make_scorer, recall_score
 from sklearn.utils.class_weight import compute_class_weight
 from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
 import pandas as pd
@@ -31,8 +31,9 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names, boost_factor = 1.0
         print(f"  {cls}: {w:.4f}")
 
 
-    # hladanie optimalneho C
-    best_C = find_best_C(X_train, y_train, class_weight_dict)
+    # hladanie optimalneho C - bud pre optimalne f1 skore alebo max recall pre triedu 1
+    #best_C = find_best_C(X_train, y_train, class_weight_dict)
+    best_C = find_best_C_recall_1(X_train, y_train, class_weight_dict)
     print(f"\nBest C found via StratifiedKFold: {best_C}")
 
     #inicializacia a trenovanie modelu
@@ -142,3 +143,33 @@ def find_best_C(X_train, y_train, class_weight_dict):
 
     grid.fit(X_train, y_train)
     return grid.best_params_['C']
+
+
+def find_best_C_recall_1(X_train, y_train, class_weight_dict):
+    param_grid = {
+        'C': [0.01, 0.1, 0.5, 1,2,5,10]
+    }
+
+    svm = LinearSVC(
+        class_weight=class_weight_dict,
+        random_state=42,
+        max_iter=5000
+    )
+
+    scorer = make_scorer(recall_score, pos_label=1) # maximalizujeme recall pre minoritnu triedu (1)
+    cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=42)   # 5 fold stratified corss validation
+    # train data split into 5 equal parts (folds) - model is trained and evaluated 5 times, each time using a different fold as the validation set and the remaining 4 folds as the training set. StratifiedKFold ensures that the class distribution is preserved in each fold, which is important for imbalanced datasets.
+    # stratified - folds preserves class ratio of dataset
+
+    grid = GridSearchCV(
+        svm,
+        param_grid,
+        scoring = scorer,
+        cv = cv,
+        n_jobs = -1,
+        verbose = 0
+    )
+
+    grid.fit(X_train, y_train)
+    return grid.best_params_['C']
+
