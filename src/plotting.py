@@ -324,11 +324,11 @@ def plot_precision_recall_curve(labels, probs, prefix=''):
 
     filename = f'{prefix}precision_recall_curve.png'
 
-    plt.savefig(
-        filename,
-        dpi=300,
-        bbox_inches='tight'
-    )
+    #plt.savefig(
+    #    filename,
+    #   dpi=300,
+    #    bbox_inches='tight'
+    #)
 
     plt.show()
     plt.close(fig)

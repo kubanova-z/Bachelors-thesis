@@ -5,11 +5,18 @@ from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
 import torch.nn.functional as F
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
+from src.plotting import plot_precision_recall_curve, plot_roc_curve
+from torch.utils.data import WeightedRandomSampler
 
 
 import matplotlib.pyplot as plt
 
 import torch.nn as nn
+
+from src.plotting import plot_roc_curve, plot_roc_curve
+
+from src.plotting import plot_precision_recall_curve
 
 
 """  Model initialization """
@@ -19,11 +26,18 @@ device = "cuda" if torch.cuda.is_available() else "cpu" # GPU, ked je dostupne, 
 model_name = "xlm-roberta-base"
 NUM_CLASSES = 2
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
 
 # nacitanie predtrenovaneho modelu xml-Roberta
 model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=NUM_CLASSES)
 model.to(device)
+
+
+
+# freezing vrstiev
+for name, param in model.named_parameters():
+    if name.startswith("bert.embeddings") or name.startswith("bert.encoder.layer.0"): # prvych par vrstiev zamrzneme
+        param.requires_grad = False # zamrznutie vrstvy - nebudu sa trenovat (prevencia overfittingu, rychlejsi trening)
 
 
 """ Dataset class  """
@@ -64,8 +78,15 @@ def create_dataloaders(X_train, y_train, X_test, y_test, batch_size = 16):
     train_dataset = TextDataset(X_train, y_train, tokenizer)
     test_dataset = TextDataset(X_test, y_test, tokenizer)
 
+     # class weights
+    class_weights = compute_class_weight(class_weight='balanced', classes=np.unique(y_train), y=y_train)
+    sample_weights = class_weights[y_train]
+    # sampler - zabezpeci, ze vzorky z mensieho triedy budu castejsie zahrnute do batchov
+    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+
+
     # dataloadres - vytvorenie batchov, premiesanie dat pre kazdu epochu
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=sampler)
     test_loader = DataLoader(test_dataset, batch_size = batch_size)
     return train_loader, test_loader
 
@@ -169,13 +190,32 @@ def evaluate_model(model, test_loader, label_names = None):
     f1_scores = 2 * precision * recall / (precision + recall + 1e-8)
     best_idx = np.argmax(f1_scores[:-1])
 
-    best_threshold = thresholds[best_idx]
+    best_threshold_f1 = thresholds[best_idx]
     best_f1 = f1_scores[best_idx]
 
-    print(f"Best threshold (F1-optimal): {best_threshold:.3f}")
+    print(f"Best threshold (F1-optimal): {best_threshold_f1:.3f}")
     print(f"Best F1 score: {best_f1:.3f}")
 
-    preds = (probs >= best_threshold).astype(int)
+    # maximalny recall
+    min_precision = 0.5 # minimalna akceptovatelna precision
+
+    valid_mask = precision[:-1] >= min_precision
+    if valid_mask.any():
+        valid_recalls = np.where(valid_mask, recall[:-1], 0)
+        best_idx_recall = np.argmax(valid_recalls)
+        best_threshold_recall = thresholds[best_idx_recall]
+
+        print(f"\nRecall-optimal threshold: {best_threshold_recall:.3f}")
+        print(f"F1: {f1_scores[best_idx_recall]:.3f} | Precision: {precision[best_idx_recall]:.3f} | Recall: {recall[best_idx_recall]:.3f}")
+    else:
+        print(f"No valid threshold found with Precision >= {min_precision}")
+        best_threshold_recall = best_threshold_f1  # fallback na F1-optimal threshold
+
+
+    # vyber strategie (f1 alebo recall)
+    best_treshold = best_threshold_recall
+
+    preds = (probs >= best_treshold).astype(int)
 
             # preds_batch = outputs.logits.argmax(dim=1).cpu().numpy()    # vybratie indexu s najvacsou pravdepodobnostou pre kazdu triedu
             # preds.extend(preds_batch)
@@ -188,33 +228,44 @@ def evaluate_model(model, test_loader, label_names = None):
     from sklearn.metrics import classification_report
     print(classification_report(labels, preds, target_names=label_names))
 
-    # ROC curve + AUC (area under curve)
 
-    fpr, tpr, _ = roc_curve(labels, probs)
-    roc_auc = auc(fpr, tpr)
+    
 
-    plt.figure()
-    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
-    plt.legend(loc="lower right")
-    plt.show()
+    true_ids = labels.astype(int)
+    pred_ids = preds.astype(int)
 
-    precision, recall, _ = precision_recall_curve(labels, probs)
-    pr_auc = average_precision_score(labels, probs)
+    plot_confusion_matrix(true_ids, pred_ids, label_names, prefix='roberta_')
+    plot_metrics_bar_chart(true_ids, pred_ids, label_names, prefix='roberta_')
 
-    plt.figure()
-    plt.plot(recall, precision, lw=2, label=f'PR curve (AP = {pr_auc:.2f})')
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.title('Precision–Recall Curve')
-    plt.legend(loc='lower left')
-    plt.grid(True)
-    plt.show()
+    plot_roc_curve(labels, probs, prefix='roberta_')
+    plot_precision_recall_curve(labels, probs, prefix='roberta_')
+    # # ROC curve + AUC (area under curve)
+
+    # fpr, tpr, _ = roc_curve(labels, probs)
+    # roc_auc = auc(fpr, tpr)
+
+    # plt.figure()
+    # plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+    # plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    # plt.xlim([0.0, 1.0])
+    # plt.ylim([0.0, 1.05])
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+    # plt.title('Receiver Operating Characteristic (ROC) Curve')
+    # plt.legend(loc="lower right")
+    # plt.show()
+
+    # precision, recall, _ = precision_recall_curve(labels, probs)
+    # pr_auc = average_precision_score(labels, probs)
+
+    # plt.figure()
+    # plt.plot(recall, precision, lw=2, label=f'PR curve (AP = {pr_auc:.2f})')
+    # plt.xlabel('Recall')
+    # plt.ylabel('Precision')
+    # plt.title('Precision–Recall Curve')
+    # plt.legend(loc='lower left')
+    # plt.grid(True)
+    # plt.show()
 
 """ Single text prediction """
 

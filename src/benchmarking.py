@@ -8,23 +8,42 @@ import pandas as pd
 '''
 Measures the training time and memory usage of a given training function.
 '''
+import time
+import torch
+import psutil
+import os
+
+
 def training_benchmark(train_fn):
-    tracemalloc.start()
-    torch.cuda.reset_peak_memory_stats() if torch.cuda.is_available() else None  # Reset GPU memory stats before training
+
+    process = psutil.Process(os.getpid())
+
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
+
+    peak_ram = 0
+
     start_time = time.time()
 
+    # --- RUN TRAINING ---
     result = train_fn()
 
+    # --- FINAL RAM CHECK ---
+    peak_ram = process.memory_info().rss / 1024 / 1024 / 1024  # Convert to GB
+
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+
     end_time = time.time()
-    current, peak_ram = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
 
     peak_gpu = (
-        torch.cuda.max_memory_allocated() / 1024 / 1024 if torch.cuda.is_available() else 0
+        torch.cuda.max_memory_allocated() / 1024 / 1024 / 1024
+        if torch.cuda.is_available() else 0
     )
+
     stats = {
         "training_time_s": round(end_time - start_time, 2),
-        "peak_ram_mb": round(peak_ram / 1024 / 1024, 2),
+        "peak_ram_mb": round(peak_ram, 2),
         "peak_gpu_mb": round(peak_gpu, 2),
     }
 
@@ -36,7 +55,12 @@ Measure inference time
 '''
 def inference_benchmark(inference_fn, X_test):
     start_time = time.time()
+
     preds = inference_fn(X_test)
+
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+
     end_time = time.time()
 
     if hasattr(X_test, 'shape'):
@@ -75,3 +99,6 @@ def build_comparison_table(results: dict):
     """
     df = pd.DataFrame(results).T
     return df
+
+
+
