@@ -17,6 +17,8 @@ import torch.nn as nn
 from src.plotting import plot_roc_curve, plot_roc_curve
 
 from src.plotting import plot_precision_recall_curve
+import os
+#os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 """  Model initialization """

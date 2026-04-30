@@ -228,7 +228,7 @@ def evaluate_model(model, test_loader, label_names = None):
 
 
     # vyber strategie (f1 alebo recall)
-    best_treshold = best_threshold_recall
+    best_treshold = best_threshold_recall  # alebo best_threshold_f1
 
 
     preds = (probs >= best_treshold).astype(int)
