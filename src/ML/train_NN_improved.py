@@ -291,6 +291,9 @@ def train_model(
         **(model_params or {})
     ).to(device)
 
+    print(f"Input dimension: {X_train.shape[1]}")
+    
+
     if loss_fn is None:
         # class weights
         if class_weights:
