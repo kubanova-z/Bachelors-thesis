@@ -39,7 +39,7 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     #hladanie idealnzch parametrov pomocou GridSearchCV 
     param_grid = {
         'n_estimators': [50, 100, 200], # pocet rozhodvacich stromov (malo - vela sumu, nestabilne vysledky, rychly trening, vela - pomaly trening, lepsie rozhodovanie)
-        'max_depth': [None, 10, 20], # max hlbka stromu
+        'max_depth': [None, 10, 20, 30], # max hlbka stromu
         'min_samples_split': [2, 5, 10], # kolko vzoriek treba na splitnutie uzla (nizsie - viac rozdeleni, riziko overfittingu, vyssie - menej rozdeleni, vacsi bias)
         'min_samples_leaf': [1, 2, 4] # minimalny pocet vzoriek v listovom uzle (nizsie - viac rozdeleni, riziko overfittingu, vyssie - menej rozdeleni, vacsi bias)
     }
