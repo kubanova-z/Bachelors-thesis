@@ -1,11 +1,11 @@
 from src.data_loader import load_data
 from src.preprocess import prepare_data
-from src.train import train_model
+from src.ML.train_NN import train_model
 from src.predict import predict_single_text
 from src.analysis import  intra_category_similarity
 from src.plotting import plot_confusion_matrix, plot_learning_curve, plot_metrics_bar_chart
-from src.train_svm import train_SVM
-from src.train_rf import train_random_forest
+from src.ML.train_svm import train_SVM
+from src.ML.train_rf import train_random_forest
 
 
 if __name__ == "__main__":

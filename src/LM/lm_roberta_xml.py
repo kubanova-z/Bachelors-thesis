@@ -1,6 +1,11 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
+import numpy as np
+from src.plotting import plot_confusion_matrix, plot_metrics_bar_chart
+from src.plotting import plot_precision_recall_curve, plot_roc_curve
+import matplotlib.pyplot as plt
 
 
 """  Model initialization """
@@ -15,6 +20,11 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 # nacitanie predtrenovaneho modelu xml-Roberta
 model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=NUM_CLASSES,  ignore_mismatched_sizes=True )
 model.to(device)
+
+
+for name, param in model.named_parameters():
+    if name.startswith("bert.embeddings") or name.startswith("bert.encoder.layer.0"): # prvych par vrstiev zamrzneme
+        param.requires_grad = False # zamrznutie vrstvy - nebudu sa trenovat (prevencia overfittingu, rychlejsi trening)
 
 
 """ Dataset class  """
@@ -73,10 +83,10 @@ def train_model(model, train_loader, epochs = 3, lr = 2e-5):
         for batch in train_loader:
             batch = {k : v.to(device) for k, v in batch.items()}    # presunut a batche na GPU / CPU
             # forward
-            outputs = model(**batch)    
+            outputs = model(**batch) 
             loss = outputs.loss
-            # spatne sirenie chyby
             loss.backward()
+            # spatne sirenie chyby
             optimizer.step()
             optimizer.zero_grad()
 
@@ -91,18 +101,31 @@ def train_model(model, train_loader, epochs = 3, lr = 2e-5):
 # classification report
 def evaluate_model(model, test_loader, label_names = None):
     model.eval()
-    preds, labels = [], []
+    preds, labels, probs = [], [], []
 
     with torch.no_grad(): # vypnutie vypoctu gradientu (rychlejsie) - uzitocne pocas trenovania
         for batch in test_loader:
             input_batch = {k : v.to(device) for k , v in batch.items() if k != 'labels'} # presun tensorov na GPU / CPU, bez labels
             outputs = model(**input_batch) # dictionary (vystuone skore pre kazdu triedu)
             preds_batch = outputs.logits.argmax(dim=1).cpu().numpy()    # vybratie indexu s najvacsou pravdepodobnostou pre kazdu triedu
+            probs_batch = F.softmax(outputs.logits, dim=1).cpu().numpy()    # vypocet pravdepodobnosti pre kazdu triedu
             preds.extend(preds_batch)
             labels.extend(batch['labels'].numpy())
+            probs.extend(probs_batch)
 
     from sklearn.metrics import classification_report
     print(classification_report(labels, preds, target_names=label_names))
+
+    
+
+    true_ids = np.asarray(labels, dtype=int)
+    pred_ids = np.asarray(preds, dtype=int)
+
+    plot_confusion_matrix(true_ids, pred_ids, label_names, prefix='roberta_')
+    plot_metrics_bar_chart(true_ids, pred_ids, label_names, prefix='roberta_')
+
+    plot_roc_curve(labels, probs, prefix='roberta_')
+    plot_precision_recall_curve(labels, probs, prefix='roberta_')
 
 
 

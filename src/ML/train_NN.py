@@ -161,6 +161,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
 
     train_loss_history = []
     test_acc_history = []
+    val_loss_history = []
 
     
 
@@ -180,6 +181,10 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
         #test accuracy check
         with torch.no_grad():
             model.eval()    #set to evaluation mode (disable dropout)
+            output_val = model(X_test)
+            val_loss = criterion(output_val, y_test)
+            val_loss_history.append(val_loss.item())
+            
             preds = model(X_test).argmax(dim=1) #predicted ids
             acc = (preds == y_test).float().mean().item()   #accuracy (correct / total samples)
             test_acc_history.append(acc)
@@ -226,7 +231,13 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     plot_confusion_matrix(true_ids, preds_ids, target_names, prefix='nn_')
 
     #plot learning curve
-    plot_learning_curve(epochs, train_loss_history,test_acc_history, prefix='nn_')
+    plot_learning_curve(
+        epochs,
+        train_loss_history,
+        val_loss_history,
+        test_acc_history,
+        prefix='nn_'
+    )
 
     #plot metrics bar chart
     plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix='nn_')

@@ -97,12 +97,12 @@ def prepare_data_word2vec(df, test_size=0.2):
 def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu"):
   
    
-    print(f"Loading pretrained BERT model '{model_name}' from Hugging Face…")
+    print(f"Loading pretrained MiniLM model '{model_name}' from Hugging Face…")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name).to(device)
    
     model.eval()
-    print("BERT embedder loaded on device:", device)
+    print("MiniLM embedder loaded on device:", device)
     return tokenizer, model
 
 # text -> embeddingy
@@ -121,7 +121,7 @@ def text_to_vector_minilm(text, tokenizer, model, device="cpu"):
     for key in inputs:
         inputs[key] = inputs[key].to(device)
 
-    # Pass through BERT
+    
     with torch.no_grad():
         outputs = model(**inputs)
     cls_embedding = outputs.last_hidden_state[:, 0, :].squeeze(0)  # shape: (hidden_size,)
