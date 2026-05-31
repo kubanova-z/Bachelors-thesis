@@ -15,7 +15,6 @@ nltk.download('punkt', quiet=True)
 EMBED_CACHE_VERSION = "minilm_embeddings_cache_v2.csv"
 
 
-
 def load_data(path: str):
     df = pd.read_csv(path, names=["Category", "Text"], header=None)
     print("Dataset shape:", df.shape)
@@ -41,7 +40,7 @@ def clean_text(text):
     return text.lower().strip()
 
 
-# nacitanie predtrenovaneho word2vec modelu cez api
+# load pretrained word2vec model 
 def load_word2vec_model():
     print("Loading pretrained Word2Vec model from gensim…")
     model = api.load("word2vec-google-news-300")
@@ -49,26 +48,25 @@ def load_word2vec_model():
     return model
 
 
-# text -> embeddingy - cele vety
 def text_to_vector(text, model):
     words = word_tokenize(text)
-    valid_words = [w for w in words if w in model.key_to_index] # iba slova ktore existuju v slovniku Word2Vec
+    valid_words = [w for w in words if w in model.key_to_index] # only words that exist in the Word2Vec vocabulary
     if not valid_words:
-        return np.zeros(model.vector_size) # slova ktore word2vec neobsahuje -> nulove vektory
-    return np.mean(model[valid_words], axis=0) # priemer embeddingov slov -> embedding vety
+        return np.zeros(model.vector_size) # words not in Word2Vec -> zero vectors
+    return np.mean(model[valid_words], axis=0) 
 
 
-# text -> embedding - len pre slova
+
 def text_to_vector_word(text, model):
     words = word_tokenize(text)
-    valid_words = [w for w in words if w in model.key_to_index] # iba slova ktore existuju v slovniku Word2Vec
+    valid_words = [w for w in words if w in model.key_to_index] # only words that exist in the Word2Vec vocabulary
     if not valid_words:
-        return np.zeros(model.vector_size) # slova ktore word2vec neobsahuje -> nulove vektory
+        return np.zeros(model.vector_size) # words not in Word2Vec -> zero vectors
     return model[valid_words[0]]
 
 
 
-# rozdelenie dat na train test
+# preparation of data for word2vec
 def prepare_data_word2vec(df, test_size=0.2):
     # clean text
     df["Text"] = df["Text"].apply(clean_text)
@@ -82,10 +80,10 @@ def prepare_data_word2vec(df, test_size=0.2):
         stratify=df["Category"]
     )
 
-    # nacitanie modelu
+    # load model
     model = load_word2vec_model()
 
-    # konverzia textu na vektory
+
     X_train_vec = np.array([text_to_vector(text, model) for text in X_train])
     X_test_vec = np.array([text_to_vector(text, model) for text in X_test])
 
@@ -94,7 +92,7 @@ def prepare_data_word2vec(df, test_size=0.2):
 
 """ MiniLM embedder"""
 
-# nacitanie predtrenovaneho word2vec modelu
+# load pretrained MiniLM model 
 def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", device=None):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -107,18 +105,17 @@ def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", de
     print("Minilm embedder loaded on device:", device)
     return tokenizer, model
 
-# text -> embeddingy
+
 def text_to_vector_minilm(text, tokenizer, model, device="cpu", cache = None):
 
-    # cache - embeddingy ulozene v csv subore, aby sa nemuseli stale generovat nanovo
+    # cache - embeddings saved in csv file, to avoid recomputation of the same text
     if cache is not None:
         row = cache[(cache["text"] == text) & (cache["version"] == EMBED_CACHE_VERSION)]
         if not row.empty:
             return np.array(json.loads(row.iloc[0]['embedding']))
 
 
-    
-    # tokenizacia vety
+
     inputs = tokenizer(
           text,
         return_tensors="pt",
@@ -131,16 +128,15 @@ def text_to_vector_minilm(text, tokenizer, model, device="cpu", cache = None):
     for key in inputs:
         inputs[key] = inputs[key].to(device)
 
-    # forward pass cez miniLM
+  
     with torch.no_grad():
         outputs = model(**inputs)
     cls_embedding = outputs.last_hidden_state[:, 0, :].squeeze(0)  
 
-   # da sa pouzit aj mean pooling
 
     vector = cls_embedding.cpu().numpy()
 
-    #save to cache (ak to z nej nebolo)
+    #save to cache 
     if cache is not None:
         new_row = {
             "text": text,

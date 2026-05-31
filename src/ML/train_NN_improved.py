@@ -16,8 +16,6 @@ from src.plotting import plot_confusion_matrix, plot_learning_curve, plot_metric
 
 
 
-
-#models
 """ Simple Feed Forward NN with one hidden layer"""
 
 class TextClassifier(nn.Module):
@@ -71,9 +69,9 @@ class DeepTextClassifier(nn.Module):
 
 
 """ Focal Loss 
-- model sa viac sustredi na "tazke" vzorky z minortinej triedy 
-- alpha = vahy pre triedy 
-- gamma = ako velmi sa sustredit na tazke vzorky a ignorovat jednoduche (gamma = 0 -> klasicky cross entropy, gamma > 0 -> viac fokus na tazke vzorky)
+- model focuses more on "hard" sammples (from minority class)
+- alpha = weights for balancing classes (alpha = 1 -> same weights, alpha > 1 -> higher weight for minority class)
+- gamma = how much the model focuses on hard samples (gamma = 0 -> classic cross entropy, gamma > 0 -> more focus on hard samples)
 """    
 
 
@@ -84,23 +82,19 @@ class FocalLoss(nn.Module):
             self.alpha = alpha
             self.alpha_is_scalar = True
         else:
-            self.register_buffer('alpha', torch.tensor(alpha, dtype=torch.float32))  # <-- register_buffer keeps it with the model
+            self.register_buffer('alpha', torch.tensor(alpha, dtype=torch.float32)) 
             self.alpha_is_scalar = False
         self.gamma = gamma
         self.reduction = reduction
        
 
     def forward(self, inputs, targets):
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none') # cross entropy loss (vrati CE pre vzorku - batch)
-        pt = torch.exp(-ce_loss)    # konverzia CE na pravdepodobnost (s akou pravdepodobnostou je modla modelu trieda spravna)
-        if self.alpha_is_scalar:    # aplha = scalar, rovnake vahy pre vsetky triedy
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none') 
+        pt = torch.exp(-ce_loss)   
+        if self.alpha_is_scalar:    
             alpha_factor = self.alpha
         else:
-            # alpha = tensor - balansovanie tried 
-            # triede 1 sme nastavili vyssiu vahu ako 0 triede
             alpha_factor = self.alpha.to(targets.device)[targets]  
-
-            # gamma - fokus na tazsie vzorky
 
         focal_loss = alpha_factor * (1 - pt) ** self.gamma * ce_loss
 
@@ -113,7 +107,7 @@ class FocalLoss(nn.Module):
         
 
 def to_tensor(X):
-    """Convert TF-IDF sparse matrix or numpy array to torch tensor"""
+    #Convert TF-IDF sparse matrix or numpy array to torch tensor
     if hasattr(X, "toarray"):
         return torch.tensor(X.toarray(), dtype=torch.float32)
     return torch.tensor(X, dtype=torch.float32)
@@ -147,7 +141,7 @@ def create_dataloaders(X_train, y_train, X_test, y_test, batch_size=32, sampler=
     return train_loader, test_loader
 
 
-#training
+""" Training and evaluation functions """
 
 def train_epoch(model, loader, criterion, optimizer, device):
 
@@ -206,10 +200,9 @@ def evaluate(model, loader, device):
 
 """ 
 Class weights
-- aplikovane priamo do chybovej funkcie
-- ked model nespravne klasifikuje vzorku z minoritnej triedy, strata bude vacsia ako pri nespravnej klasifikacii majoritnej triedy
-- model je nuteny venovat viac pozornosti minoritnej triede, aby minimalizoval celkovu stratu
-- nemenia sa vstupne data do modelu, ale model sa uci zohladnovat nerovnovahu v chybovej funkcii
+- applied directly in the loss function (before loss calculation)
+- when sample from minority class is misclassified, model receives higher penalty (higher loss) 
+- model is forced to focus more on the minority class
 """
 
 def compute_weights(y_train, boost_factor=1.0, device="cpu", soften = 0.5):
@@ -229,9 +222,9 @@ def compute_weights(y_train, boost_factor=1.0, device="cpu", soften = 0.5):
 
 """ 
 Weighted Sampler
-- sampler, ktory zabezpeci, ze sa vzorky z minoritnej triedy budu mmodelu zobrazovat castejsie
-- aplikuje sa do dataloaderu, ktory sa pouziva pri trenovani modelu (pred vypoctom chyby)
-- v kazdej epoche model vidi viac vzoriek z minoritnej triedy
+- samples data points based on their class weights 
+- applied in dataloader (before training)
+- in each epoch the model sees more samples from the minority class
 
 
 """

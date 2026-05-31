@@ -4,16 +4,13 @@ from tokenizers import Tokenizer
 import torch
 import pandas as pd
 from memory_profiler import memory_usage
-
-
-
-'''
-Measures the training time and memory usage of a given training function.
-'''
 import time
 import torch
-import psutil
-import os
+
+
+
+
+''' Measures the training time and memory usage of a given training function. '''
 
 
 def predict_fn(model, texts, tokenizer, device):
@@ -43,7 +40,7 @@ def training_benchmark(train_fn):
 
     start_time = time.perf_counter()
 
-    # --- RUN TRAINING WITH MEMORY TRACKING ---
+    # training with memory tracking
     mem_usage, result = memory_usage(
         (train_fn, ),
         retval=True,
@@ -72,9 +69,8 @@ def training_benchmark(train_fn):
     return result, stats
 
 
-'''
-Measure inference time
-'''
+''' Measure inference time '''
+
 def inference_benchmark(inference_fn, X_test, n_latency_runs=50):
     _ = inference_fn(X_test[:10] if hasattr(X_test, 'shape') else X_test[:10])
     if torch.cuda.is_available():
@@ -95,7 +91,7 @@ def inference_benchmark(inference_fn, X_test, n_latency_runs=50):
         n_samples = len(X_test)
 
     total = round(end_time - start_time, 4)
-    per_sample = round((end_time - start_time) / n_samples * 1000, 4)  # Time per sample in milliseconds
+    per_sample = round((end_time - start_time) / n_samples * 1000, 4)  # time per sample in milliseconds
 
     sample = X_test[0:1] if hasattr(X_test, 'shape') else [X_test[0]]
 
@@ -124,7 +120,6 @@ def inference_benchmark(inference_fn, X_test, n_latency_runs=50):
 
 def inference_latency_benchmark(inference_fn, X_test, n_runs=100):
 
-    # Take one sample
     sample = X_test[0:1] if hasattr(X_test, 'shape') else [X_test[0]]
 
     times = []
@@ -147,11 +142,11 @@ def inference_latency_benchmark(inference_fn, X_test, n_runs=100):
     }
 
 
-'''Counts the number of trainable parameters in a PyTorch model.
-'''
+'''Counts the number of trainable parameters in a PyTorch model. '''
+
 def count_parameters(model):
     total = sum(p.numel() for p in model.parameters()) # total parameters
-    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad) # trainable parameters - updated during trining
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad) # trainable parameters - updated during training
     return total, trainable
 
 

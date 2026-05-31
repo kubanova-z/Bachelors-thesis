@@ -4,13 +4,12 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.font_manager as fm
+import os
+os.makedirs('/img', exist_ok=True)
 
-# Path to your font file
+# Path to font file
 font_path ="/home/xkubanova_126831/bakalarka/font/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf"
-
-# Register font
 fm.fontManager.addfont(font_path)
-
 # Set as default font
 plt.rcParams['font.family'] = 'Open Sans'
 
@@ -23,8 +22,6 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
         confusion_matrix=cm_normalized,
         display_labels=target_names
     )
-
-    from matplotlib.colors import LinearSegmentedColormap
 
     custom_cmap = LinearSegmentedColormap.from_list(
         "thesis_blue",
@@ -40,22 +37,20 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
         values_format='.1%'
     )
 
-    # --- FONT SIZE CONTROL ---
+
     ax.set_title('Confusion Matrix', fontsize=20, fontweight='bold')
     ax.set_ylabel('True Category', fontsize=16, fontweight='bold')
     ax.set_xlabel('Predicted Category', fontsize=16, fontweight='bold')
 
-    # Tick labels
     ax.tick_params(axis='both', labelsize=14)
 
-    # Numbers inside cells
     for text in disp.text_.ravel():
         text.set_fontsize(30)
 
     plt.tight_layout()
 
-    ##filename = f'{prefix}confusion_matrix_results.png'
-    ##plt.savefig(filename, dpi=300, bbox_inches='tight')
+    filename = f'/img/{prefix}confusion_matrix_results.png'
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
 
     plt.show()
     plt.close(fig)    
@@ -95,17 +90,16 @@ def plot_learning_curve(epochs, train_loss, test_acc, prefix=''):
     ax2.legend()
     ax2.grid(True, linestyle='--', alpha=0.6)
 
-    filename = f'{prefix}learning_curve.png'
+    filename = f'/img/{prefix}learning_curve.png'
 
     plt.show()
-    plt.tight_layout()
-    
     plt.savefig(filename)
+    plt.tight_layout() 
     plt.close(fig)
     
 
     
-# bar chart - F1 score
+#BAR CHART
 def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
     report = classification_report(
@@ -121,12 +115,7 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
         .iloc[:-3]
     )
 
-    # Round for readability
     df_report = df_report[['precision', 'recall', 'f1-score']].round(3)
-
-    # -----------------------
-    # BAR CHART
-    # -----------------------
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -154,15 +143,11 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
     plt.tight_layout()
 
-    filename = f'{prefix}per_class_metrics.png'
+    filename = f'/img/{prefix}per_class_metrics.png'
     plt.savefig(filename, dpi=300)
 
     plt.show()
     plt.close(fig)
-
-    # -----------------------
-    # TABLE FIGURE
-    # -----------------------
 
     fig, ax = plt.subplots(figsize=(8, 2 + len(df_report) * 0.5))
 
@@ -188,7 +173,7 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
     plt.tight_layout()
 
-    filename_table = f'{prefix}per_class_metrics_table.png'
+    filename_table = f'/img/{prefix}per_class_metrics_table.png'
 
     plt.savefig(
         filename_table,
@@ -199,20 +184,17 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
     plt.show()
     plt.close(fig)
 
-    # -----------------------
-    # OPTIONAL EXPORTS
-    # -----------------------
 
     df_report.to_csv(
-        f'{prefix}per_class_metrics.csv'
+        f'/img/{prefix}per_class_metrics.csv'
     )
 
     return df_report
 
 
-# -----------------------
-# ROC CURVE
-# -----------------------
+
+#ROC CURVE
+
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 
@@ -267,7 +249,7 @@ def plot_roc_curve(labels, probs, prefix=''):
 
     plt.tight_layout()
 
-    filename = f'{prefix}roc_curve.png'
+    filename = f'/img/{prefix}roc_curve.png'
 
     plt.savefig(
         filename,
@@ -280,11 +262,8 @@ def plot_roc_curve(labels, probs, prefix=''):
 
     return roc_auc
 
-# -----------------------
-# PR CURVE
-# -----------------------
-    
 
+#PR CURVE
 from sklearn.metrics import precision_recall_curve, average_precision_score
 
 
@@ -322,13 +301,13 @@ def plot_precision_recall_curve(labels, probs, prefix=''):
 
     plt.tight_layout()
 
-    filename = f'{prefix}precision_recall_curve.png'
+    filename = f'/img/{prefix}precision_recall_curve.png'
 
-    #plt.savefig(
-    #    filename,
-    #   dpi=300,
-    #    bbox_inches='tight'
-    #)
+    plt.savefig(
+       filename,
+      dpi=300,
+       bbox_inches='tight'
+    )
 
     plt.show()
     plt.close(fig)

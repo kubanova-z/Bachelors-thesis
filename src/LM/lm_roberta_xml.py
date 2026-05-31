@@ -1,5 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
@@ -12,11 +13,7 @@ from torch.utils.data import WeightedRandomSampler
 
 import matplotlib.pyplot as plt
 
-import torch.nn as nn
 
-from src.plotting import plot_roc_curve, plot_roc_curve
-
-from src.plotting import plot_precision_recall_curve
 import os
 #os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -30,33 +27,32 @@ NUM_CLASSES = 2
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
 
-# nacitanie predtrenovaneho modelu xml-Roberta
+# load pretrained xlm-Roberta
 model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=NUM_CLASSES)
 model.to(device)
 
 
 
-# freezing vrstiev
+
 for name, param in model.named_parameters():
-    if name.startswith("bert.embeddings") or name.startswith("bert.encoder.layer.0"): # prvych par vrstiev zamrzneme
-        param.requires_grad = False # zamrznutie vrstvy - nebudu sa trenovat (prevencia overfittingu, rychlejsi trening)
+    if name.startswith("bert.embeddings") or name.startswith("bert.encoder.layer.0"): # freeze layer - will not be trained, prevention of overfitting, faster training
+        param.requires_grad = False 
 
 
 """ Dataset class  """
 
 class TextDataset(Dataset):
-    # PyTorch dataset
-    # premena textu na tokenizovane tensori
+
     def __init__(self, texts, labels, tokenizer, max_length = 300):
-       self.texts = texts # vstupny text
+       self.texts = texts 
        self.labels = labels
-       self.tokenizer = tokenizer   # predtrenovany tokenizer
-       self.max_length = max_length     # maximalna dlzka vzorky
+       self.tokenizer = tokenizer   
+       self.max_length = max_length  
 
     def __len__(self):
-        return len(self.texts)  # pocet vzoriek v datasete
+        return len(self.texts)  
     
-    def __getitem__(self, index):   # jedna vzorka
+    def __getitem__(self, index):  
        text = self.texts[index]
        label = self.labels[index]
        encoding = self.tokenizer(
@@ -66,28 +62,27 @@ class TextDataset(Dataset):
            max_length = self.max_length,
            return_tensors = 'pt'
        )
-       encoding = {k: v.squeeze(0) for k, v in encoding.items()}    # odstranenie batch dimenzie
-       encoding['labels']= torch.tensor(label, dtype=torch.long)    # pridanie tensor labelu
+       encoding = {k: v.squeeze(0) for k, v in encoding.items()}   
+       encoding['labels']= torch.tensor(label, dtype=torch.long)    
        return encoding
     
 
 """ Dataloader """
-# konverzia textu a labelov na PyTorch Dataloaders objekty
-# batchovanie, rozdelenie na test / train
+# conversion of text and labels into batches, shuffling of data for training, faster processing
 def create_dataloaders(X_train, y_train, X_test, y_test, batch_size = 16):
 
-    # trenovaci a testovaci dataset
+    # training and test dataset
     train_dataset = TextDataset(X_train, y_train, tokenizer)
     test_dataset = TextDataset(X_test, y_test, tokenizer)
 
      # class weights
     class_weights = compute_class_weight(class_weight='balanced', classes=np.unique(y_train), y=y_train)
     sample_weights = class_weights[y_train]
-    # sampler - zabezpeci, ze vzorky z mensieho triedy budu castejsie zahrnute do batchov
+    # sampler - to handle imbalance
     sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
 
 
-    # dataloadres - vytvorenie batchov, premiesanie dat pre kazdu epochu
+    # dataloadres - creation of batches, shuffling of data every epoch
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=sampler)
     test_loader = DataLoader(test_dataset, batch_size = batch_size)
     return train_loader, test_loader
@@ -123,7 +118,7 @@ def get_class_weights(labels, device):
 def train_model(model, train_loader, epochs = 5, lr = 2e-5, use_focal_loss = True, class_weights = None):
 
     optimizer = torch.optim.AdamW(model.parameters(), lr = lr)
-    # model v trenovacom mode
+
     model.train()
 
     if use_focal_loss:
@@ -138,15 +133,13 @@ def train_model(model, train_loader, epochs = 5, lr = 2e-5, use_focal_loss = Tru
         total_loss = 0
 
         for batch in train_loader:
-            batch = {k : v.to(device) for k, v in batch.items()}    # presunut a batche na GPU / CPU
-            # forward
+            batch = {k : v.to(device) for k, v in batch.items()}    # use GPU
             outputs = model(
                 input_ids=batch['input_ids'],
                 attention_mask=batch['attention_mask'],
                 
             )    
             loss = criterion(outputs.logits, batch['labels'])
-            # spatne sirenie chyby
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -161,9 +154,6 @@ def train_model(model, train_loader, epochs = 5, lr = 2e-5, use_focal_loss = Tru
 
 
 """ Evaluation """
-# classification report
-
-
 
 
 def evaluate_model(model, test_loader, label_names = None):
@@ -173,14 +163,13 @@ def evaluate_model(model, test_loader, label_names = None):
     
 
 
-    with torch.no_grad(): # vypnutie vypoctu gradientu (rychlejsie) - uzitocne pocas trenovania
+    with torch.no_grad(): 
         for batch in test_loader:
-            input_batch = {k : v.to(device) for k , v in batch.items() if k != 'labels'} # presun tensorov na GPU / CPU, bez labels
-            outputs = model(**input_batch) # dictionary (vystuone skore pre kazdu triedu)
+            input_batch = {k : v.to(device) for k , v in batch.items() if k != 'labels'} 
+            outputs = model(**input_batch) 
 
             probabilities = F.softmax(outputs.logits, dim=1)[:, 1].cpu().numpy()
-            #predictions = outputs.logits.argmax(dim=1).cpu().numpy()    # vybratie indexu s najvacsou pravdepodobnostou pre kazdu triedu
-           
+            #predictions = outputs.logits.argmax(dim=1).cpu().numpy()   
 
             probs.extend(probabilities)
             labels.extend(batch['labels'].numpy())
@@ -198,8 +187,8 @@ def evaluate_model(model, test_loader, label_names = None):
     print(f"Best threshold (F1-optimal): {best_threshold_f1:.3f}")
     print(f"Best F1 score: {best_f1:.3f}")
 
-    # maximalny recall
-    min_precision = 0.5 # minimalna akceptovatelna precision
+    # maximizing recall for minority class
+    min_precision = 0.5 
 
     valid_mask = precision[:-1] >= min_precision
     if valid_mask.any():
@@ -211,15 +200,15 @@ def evaluate_model(model, test_loader, label_names = None):
         print(f"F1: {f1_scores[best_idx_recall]:.3f} | Precision: {precision[best_idx_recall]:.3f} | Recall: {recall[best_idx_recall]:.3f}")
     else:
         print(f"No valid threshold found with Precision >= {min_precision}")
-        best_threshold_recall = best_threshold_f1  # fallback na F1-optimal threshold
+        best_threshold_recall = best_threshold_f1  
 
 
-    # vyber strategie (f1 alebo recall)
+    # maximizing F1 score or recall for minority class
     best_treshold = best_threshold_recall
 
     preds = (probs >= best_treshold).astype(int)
 
-            # preds_batch = outputs.logits.argmax(dim=1).cpu().numpy()    # vybratie indexu s najvacsou pravdepodobnostou pre kazdu triedu
+            # preds_batch = outputs.logits.argmax(dim=1).cpu().numpy()    
             # preds.extend(preds_batch)
             # labels.extend(batch['labels'].numpy())
 
@@ -241,41 +230,14 @@ def evaluate_model(model, test_loader, label_names = None):
 
     plot_roc_curve(labels, probs, prefix='roberta_')
     plot_precision_recall_curve(labels, probs, prefix='roberta_')
-    # # ROC curve + AUC (area under curve)
-
-    # fpr, tpr, _ = roc_curve(labels, probs)
-    # roc_auc = auc(fpr, tpr)
-
-    # plt.figure()
-    # plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-    # plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    # plt.xlim([0.0, 1.0])
-    # plt.ylim([0.0, 1.05])
-    # plt.xlabel('False Positive Rate')
-    # plt.ylabel('True Positive Rate')
-    # plt.title('Receiver Operating Characteristic (ROC) Curve')
-    # plt.legend(loc="lower right")
-    # plt.show()
-
-    # precision, recall, _ = precision_recall_curve(labels, probs)
-    # pr_auc = average_precision_score(labels, probs)
-
-    # plt.figure()
-    # plt.plot(recall, precision, lw=2, label=f'PR curve (AP = {pr_auc:.2f})')
-    # plt.xlabel('Recall')
-    # plt.ylabel('Precision')
-    # plt.title('Precision–Recall Curve')
-    # plt.legend(loc='lower left')
-    # plt.grid(True)
-    # plt.show()
+   
 
 """ Single text prediction """
 
 def predict_sentence(text, model, tokenizer, target_names, device = 'cuda', max_length = 128):
     model.to(device)
-    model.eval() # vyhodnocovaci rezim
+    model.eval() 
 
-# tokenizacia textu
     encoding = tokenizer(
         text,
         truncation = True,

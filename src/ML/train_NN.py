@@ -14,7 +14,7 @@ import pandas as pd
 import torch.nn.functional as F
 
 #feed forward neural network
-#inupt(dim) - size of the input features (5000)
+#inupt(dim) - size of the input features (3000)
 #hidden(dim) - number of neurons in the hidden layer
 #dropout - probability of a neuron being set to zero (only during training)
 

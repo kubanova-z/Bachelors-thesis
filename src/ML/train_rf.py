@@ -32,16 +32,16 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
 
     class_weight_dict = {cls: w for cls, w in zip(classes, class_weights)}
 
-    #inicilizacia a trenovanie modelu
-    #n_estimators = pocet stromov
-    #n_jobs = pouzitie dostupnych jadier procesora, aby bol trening rychlejsi
+    #initialization of the model
+    #n_estimators = number of decision trees
 
-    #hladanie idealnzch parametrov pomocou GridSearchCV 
+
+    #GridSearchCV - hyperparameter tuning 
     param_grid = {
-        'n_estimators': [50, 100, 200], # pocet rozhodvacich stromov (malo - vela sumu, nestabilne vysledky, rychly trening, vela - pomaly trening, lepsie rozhodovanie)
-        'max_depth': [None, 10, 20, 30], # max hlbka stromu
-        'min_samples_split': [2, 5, 10], # kolko vzoriek treba na splitnutie uzla (nizsie - viac rozdeleni, riziko overfittingu, vyssie - menej rozdeleni, vacsi bias)
-        'min_samples_leaf': [1, 2, 4] # minimalny pocet vzoriek v listovom uzle (nizsie - viac rozdeleni, riziko overfittingu, vyssie - menej rozdeleni, vacsi bias)
+        'n_estimators': [50, 100, 200], # number of trees in the forest
+        'max_depth': [None, 10, 20, 30], # max depth of each tree
+        'min_samples_split': [2, 5, 10], # minimum number of samples required to split an internal node (lower - more splits, risk of overfitting, higher - fewer splits, more bias)
+        'min_samples_leaf': [1, 2, 4] # minimum number of samples required to be at a leaf node (lower - more splits, risk of overfitting, higher - fewer splits, more bias)
     }
 
 
@@ -49,12 +49,12 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     rf_model = BalancedRandomForestClassifier(
     n_estimators=100,
     random_state=42,
-    n_jobs=-1, # vsetky CPU pre rychlejsi trening
-    class_weight=class_weight_dict,  # vypoet vah pre kazdy strom samostatne (bue pre cely dataset)
+    n_jobs=-1, 
+    class_weight=class_weight_dict,  
     verbose=0
 )
 
-    # hladat optimalne f1 skore alebo maximalizovat recall pre minoritnu triedu (1)
+    # Maximiying F1 score or recall for the minority class
     #scorer = make_scorer(f1_score, average='macro')
     scorer = make_scorer(recall_score, pos_label=1)
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -66,13 +66,9 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     print(f"\nBest Random Forest parameters found via StratifiedKFold: {grid.best_params_}")
 
 
-    
 
-    # predikcia na testovacich datach  
-    # teraz nepouzivam gridsearch
     preds_labels = best_rf.predict(X_test)
 
-    #evaluacia vysledkov
     report= classification_report(
         y_test,
         preds_labels,
@@ -81,7 +77,7 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     )
     print(report)
 
-    #plotting statistik (labels -> int)
+
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate (classes)}
 
@@ -98,11 +94,11 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
 def print_rf_input(X_train, y_train):
     print("\n--- RF Model Input Data Summary ---")
     
-    # Pre SciPy maticu používame X_train.shape
+   
     print(f"X_train Shape (samples, features): {X_train.shape}")
     print(f"X_train Data Type: {X_train.dtype}")
     
-    # Pre Pandas Series (y_train) používame .shape
+  
     print(f"y_train Shape (labels): {y_train.shape}")
     print(f"y_train Data Type: {y_train.dtype}")
     
@@ -120,7 +116,6 @@ def print_rf_input(X_train, y_train):
         print("First sample (first 10 embedding values):")
     
     print("Prvá vzorka (prvých 10 TF-IDF hodnôt):")
-    # Vypíšeme len prvých 10 prvkov z hustého poľa (array)
     print(sample_vector[:10]) 
     print("-" * 30)
 

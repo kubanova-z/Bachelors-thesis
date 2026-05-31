@@ -13,7 +13,7 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names, boost_factor = 1.0
 
     print_SVM_input(X_train, y_train)
 
-    # vypocet vah pre triedy
+    # compute class weights
     classes = np.unique(y_train)
     class_weights = compute_class_weight(
         class_weight='balanced',
@@ -31,13 +31,13 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names, boost_factor = 1.0
         print(f"  {cls}: {w:.4f}")
 
 
-    # hladanie optimalneho C - bud pre optimalne f1 skore alebo max recall pre triedu 1
+    # optimal value of C paramter - maximizing F1 score or recall for minority class
     #best_C = find_best_C(X_train, y_train, class_weight_dict)
     best_C = find_best_C_recall_1(X_train, y_train, class_weight_dict)
     print(f"\nBest C found via StratifiedKFold: {best_C}")
 
-    #inicializacia a trenovanie modelu
-    #C relularizacny parameter (vyssie -> riziko overfittingu, nizsie -> viac chyb, ale vacsi margin)
+    #initialization and training of the model
+    #C regularization parameter - higher C - small margin, larger emphasis on correct classification, but risk of overfitting
     svm_model = LinearSVC(C=best_C,
                           class_weight=class_weight_dict,
                            random_state=42, 
@@ -46,13 +46,10 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names, boost_factor = 1.0
     #
     svm_model.fit(X_train, y_train)
 
-    # predikcia na testovacich datach
-    # labels sa spracovavaju priamo ako textove retazce, netreba ich konvertovat na cisla ako pri NN
+
     preds_labels = svm_model.predict(X_test)
 
     #evaluation
-
-    #classification report (porovnanie skutocnych a predikovanych labels)
     print("\n--- SVM CLASSIFICATION REPORT ---")
     report = classification_report(
         y_test, 
@@ -61,9 +58,6 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names, boost_factor = 1.0
         digits=4
     )
     print(report)
-
-    #confusion matrix
-    #matrics bar chart
 
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate(classes)}
@@ -82,11 +76,11 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names, boost_factor = 1.0
 def print_SVM_input(X_train, y_train):
     print("\n--- SVM Model Input Data Summary ---")
     
-    # Pre SciPy maticu používame X_train.shape
+
     print(f"X_train Shape (samples, features): {X_train.shape}")
     print(f"X_train Data Type: {X_train.dtype}")
     
-    # Pre Pandas Series (y_train) používame .shape
+
     print(f"y_train Shape (labels): {y_train.shape}")
     print(f"y_train Data Type: {y_train.dtype}")
     
@@ -106,7 +100,7 @@ def print_SVM_input(X_train, y_train):
         print("First sample (first 10 embedding values):")
 
     
-    # Vypíšeme len prvých 10 prvkov z hustého poľa (array)
+
     print(sample_vector[:10]) 
     print("-" * 30)
 
@@ -115,7 +109,7 @@ def print_SVM_input(X_train, y_train):
 # velke C - maly margin, vacsi doraz na spravnu klasifikaciu, ale riziko pretrenovania
 # male C - vacsi margin, lepsia generalizacia, ale viac nespravnych klasifikacii, riziko underfittingu
 
-# otestovanie roznych hodnot C, vyberia sa ta, ktora bude mat najlepsie 'weighted F1 score' na validacnych datach
+# testing different values of C parameter - maximizing F1 score or recall for minority class
 def find_best_C(X_train, y_train, class_weight_dict):
     param_grid = {
         'C': [0.01, 0.1, 0.5, 1,2,5,10]
@@ -127,8 +121,8 @@ def find_best_C(X_train, y_train, class_weight_dict):
         max_iter=5000
     )
 
-    scorer = make_scorer(f1_score, average ='weighted')  #predtym macro (pouziva sa weighted F1 score)
-    cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=42)   # 5 fold stratified corss validation
+    scorer = make_scorer(f1_score, average ='weighted')  
+    cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=42)   # 5 fold stratified cross validation
     # train data split into 5 equal parts (folds) - model is trained and evaluated 5 times, each time using a different fold as the validation set and the remaining 4 folds as the training set. StratifiedKFold ensures that the class distribution is preserved in each fold, which is important for imbalanced datasets.
     # stratified - folds preserves class ratio of dataset
 
@@ -156,8 +150,8 @@ def find_best_C_recall_1(X_train, y_train, class_weight_dict):
         max_iter=5000
     )
 
-    scorer = make_scorer(recall_score, pos_label=1) # maximalizujeme recall pre minoritnu triedu (1)
-    cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=42)   # 5 fold stratified corss validation
+    scorer = make_scorer(recall_score, pos_label=1) # maximizing recall for minority class
+    cv = StratifiedKFold(n_splits=5, shuffle = True, random_state=42)   # 5 fold stratified cross validation
     # train data split into 5 equal parts (folds) - model is trained and evaluated 5 times, each time using a different fold as the validation set and the remaining 4 folds as the training set. StratifiedKFold ensures that the class distribution is preserved in each fold, which is important for imbalanced datasets.
     # stratified - folds preserves class ratio of dataset
 

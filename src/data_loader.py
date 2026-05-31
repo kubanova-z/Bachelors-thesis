@@ -12,8 +12,6 @@ def load_data(path: str):
     # Keep only the two needed columns
     df = df[["Category", "Text"]]
 
-
-    #shape of the file - number of rows and columns
     print("Dataset shape:", df.shape)
     
 
@@ -25,15 +23,13 @@ def load_data(path: str):
 
     for index, row in df_sample.iterrows():
         category = row['Category']
-        # Extract the first 200 characters of the text
+        #extract the first 200 characters of the text
         description = row['Text'][:400]
         
-        # Print the desired format: Category, newline, 200 chars of text
+
         print(f"\n{category}:")
         print(f"  {description}...")
 
-    # reset column width to a standard value
     pd.set_option('display.max_colwidth', 50) 
-    #representative from each category
    
     return df
