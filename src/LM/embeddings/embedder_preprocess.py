@@ -11,6 +11,7 @@ from transformers import AutoModel, AutoTokenizer
 nltk.download('punkt', quiet=True)
 
 
+""" Load and preprocess data """
 
 def load_data(path: str):
     df = pd.read_csv(path, names=["Category", "Text"], header=None)
@@ -28,10 +29,9 @@ def load_data(path: str):
     pd.set_option('display.max_colwidth', 50)
     return df
 
-
+""" Text cleaning """
 
 def clean_text(text):
-    
     if not isinstance(text, str):
         text = str(text)
     text = text.lower()
@@ -40,7 +40,7 @@ def clean_text(text):
     return text
 
 
-# nacitanie predtrenovaneho word2vec modelu cez api
+""" Word2Vec embedder"""
 def load_word2vec_model():
     print("Loading pretrained Word2Vec model from gensim…")
     model = api.load("word2vec-google-news-300")
@@ -48,16 +48,15 @@ def load_word2vec_model():
     return model
 
 
-# text -> embeddingy - cele vety
+""" Conversion of text to vector - Word2Vec"""
 def text_to_vector(text, model):
     words = word_tokenize(text)
-    valid_words = [w for w in words if w in model.key_to_index] # iba slova ktore existuju v slovniku Word2Vec
+    valid_words = [w for w in words if w in model.key_to_index] # words in the Word2Vec vocabulary
     if not valid_words:
-        return np.zeros(model.vector_size) # slova ktore word2vec neobsahuje -> nulove vektory
-    return np.mean(model[valid_words], axis=0) # priemer embeddingov slov -> embedding vety
+        return np.zeros(model.vector_size) # words not in the Word2Vec vocabulary -> zero vectors
+    return np.mean(model[valid_words], axis=0) 
 
 
-# text -> embedding - len pre slova
 def text_to_vector_word(text, model):
     words = word_tokenize(text)
     valid_words = [w for w in words if w in model.key_to_index] # iba slova ktore existuju v slovniku Word2Vec
@@ -67,7 +66,7 @@ def text_to_vector_word(text, model):
 
 
 
-# rozdelenie dat na train test
+""" Preparation of data - Word2Vec"""
 def prepare_data_word2vec(df, test_size=0.2):
     # clean text
     df["Text"] = df["Text"].apply(clean_text)
@@ -81,10 +80,10 @@ def prepare_data_word2vec(df, test_size=0.2):
         stratify=df["Category"]
     )
 
-    # nacitanie modelu
+    # load model
     model = load_word2vec_model()
 
-    # konverzia textu na vektory
+    # text -> embeddingys
     X_train_vec = np.array([text_to_vector(text, model) for text in X_train])
     X_test_vec = np.array([text_to_vector(text, model) for text in X_test])
 
@@ -93,7 +92,7 @@ def prepare_data_word2vec(df, test_size=0.2):
 
 """ MiniLM embedder"""
 
-# nacitanie predtrenovaneho word2vec modelu
+# load pretrained MiniLM model
 def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu"):
   
    
@@ -105,7 +104,7 @@ def load_minilm_embedder(model_name="sentence-transformers/all-MiniLM-L6-v2", de
     print("MiniLM embedder loaded on device:", device)
     return tokenizer, model
 
-# text -> embeddingy
+""" Conversion of text to vector - MiniLM """
 def text_to_vector_minilm(text, tokenizer, model, device="cpu"):
     
     # Tokenize the sentence
@@ -129,7 +128,8 @@ def text_to_vector_minilm(text, tokenizer, model, device="cpu"):
     return cls_embedding.cpu().numpy() 
 
 
-# rozdelenie dat na train test
+""" Preparation of data - MiniLM """
+
 def prepare_data_minilm(df, tokenizer, model, test_size=0.2, device="cpu", batch_size = 32):
     
     # Clean text
@@ -161,7 +161,6 @@ def text_to_vectors_minilm_batch(texts, tokenizer, model, device="cpu", batch_si
     for i in tqdm(range(0, len(texts), batch_size), desc="Encoding batches"):
         batch_texts = texts[i:i+batch_size]
 
-        # tokenizacia
         inputs = tokenizer(
             batch_texts,
             return_tensors="pt",
@@ -175,7 +174,6 @@ def text_to_vectors_minilm_batch(texts, tokenizer, model, device="cpu", batch_si
             outputs = model(**inputs)
             cls_embeddings = outputs.last_hidden_state[:, 0, :]  # [CLS] token
 
-        # Move to CPU & store
         all_embeddings.append(cls_embeddings.cpu().numpy())
 
     return np.vstack(all_embeddings)

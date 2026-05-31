@@ -11,7 +11,7 @@ from src.plotting import plot_confusion_matrix, plot_learning_curve, plot_metric
 import pandas as pd
 
 #feed forward neural network
-#inupt(dim) - size of the input features (5000)
+#inupt(dim) - size of the input features 
 #hidden(dim) - number of neurons in the hidden layer
 #dropout - probability of a neuron being set to zero (only during training)
 
@@ -66,30 +66,7 @@ class DeepTextClassifier(nn.Module):
         return self.network(x)
     
 
-
-""" Recurent NN """    
-# useful just when input is embedding / tokens  
-
-class RNNTextClassifier(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_layers = 1, dropout_rate = 0.5, rnn_type=type):
-
-        super(RNNTextClassifier, self).__init__()
-
-        if rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first = True, dropout = dropout_rate)
-        elif rnn_type == 'GRU':
-            self.rnn = nn.GRU(input_dim, hidden_dim, num_layers, batch_first = True, dropout = dropout_rate)
-        else:
-            self.rnn = nn.RNN(input_dim, hidden_dim, num_layers, batch_first = True, nonlinearity= 'tanh')
-    
-        self.fc = nn.Linear(hidden_dim, output_dim)
-
-    def forward(self, x):
-       output, _ = self.rnn(x)
-       last_output = output[:, -1, :]
-       return self.fc(last_output)
-
-        
+     
         
 """ Training the model """ 
 
@@ -98,7 +75,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
         model_params = {}
 
   
-    # convert inputs to PyTorch tensors - tp be able to handle both TF-IDF and embeddings
+    # convert inputs to PyTorch tensors - to be able to handle both TF-IDF and embeddings
 
     if hasattr(X_train, "toarray"): # TF-IDF
         X_train_tensor = torch.tensor(X_train.toarray()).float()
@@ -125,7 +102,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     else:
         X_test = torch.tensor(X_test).float()
 
-    # cotegories -> integers
+    # categories -> integers
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
 
@@ -142,9 +119,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
-   
-    #print sample of inputs
-    #print_NN_input_sample(X_train, y_train)
+
 
     #initialization of text classifier - used model
     input_dim = X_train_tensor.shape[1]
@@ -164,8 +139,6 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     val_loss_history = []
 
     
-
-
     #TRAINING
     for epoch in range(epochs):
         model.train()   #set to training mode (enable dropout)
@@ -175,9 +148,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
         loss.backward() #backward pass - algoritmus spatneho sirenia chyby
         optimizer.step()    #update model weights based on gradients
         train_loss_history.append(loss.item())  #trauning loss
-        #if(epoch % 10 == 0):
-        #    print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
-
+    
         #test accuracy check
         with torch.no_grad():
             model.eval()    #set to evaluation mode (disable dropout)

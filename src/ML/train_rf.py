@@ -12,9 +12,9 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names):
 
     print_rf_input(X_train, y_train)
 
-    #inicilizacia a trenovanie modelu
-    #n_estimators = pocet stromov
-    #n_jobs = pouzitie dostupnych jadier procesora, aby bol trening rychlejsi
+    #initialization of Random Forest model
+    #n_estimators = number of decision trees
+    #n_jobs = utilization of available processor cores to make training faster
     rf_model = RandomForestClassifier(
         n_estimators=100,
         random_state=42,
@@ -24,10 +24,10 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names):
 
     rf_model.fit(X_train, y_train)
 
-    # predikcia na testovacich datach
+    # test data predictions
     preds_labels = rf_model.predict(X_test)
 
-    #evaluacia vysledkov
+    # evaluation
     report= classification_report(
         y_test,
         preds_labels,
@@ -36,7 +36,6 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names):
     )
     print(report)
 
-    #plotting statistik (labels -> int)
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate (classes)}
 
@@ -53,11 +52,11 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names):
 def print_rf_input(X_train, y_train):
     print("\n--- RF Model Input Data Summary ---")
     
-    # Pre SciPy maticu používame X_train.shape
+    # SciPy matrix
     print(f"X_train Shape (samples, features): {X_train.shape}")
     print(f"X_train Data Type: {X_train.dtype}")
     
-    # Pre Pandas Series (y_train) používame .shape
+    # Pandas Series 
     print(f"y_train Shape (labels): {y_train.shape}")
     print(f"y_train Data Type: {y_train.dtype}")
     

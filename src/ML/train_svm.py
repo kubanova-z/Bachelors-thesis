@@ -9,20 +9,17 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names):
 
     print_SVM_input(X_train, y_train)
 
-    #inicializacia a trenovanie modelu
-    #C relularizacny parameter (vyssie -> riziko overfittingu, nizsie -> viac chyb, ale vacsi margin)
+    #initialization of SVM model
+    #C regulatory parameter (higher -> risk of overfitting, lower -> more errors, but larger margin)
     svm_model = LinearSVC(C=2.0, random_state=42, verbose= 0)
 
-    #
+    
     svm_model.fit(X_train, y_train)
 
-    # predikcia na testovacich datach
-    # labels sa spracovavaju priamo ako textove retazce, netreba ich konvertovat na cisla ako pri NN
+    # test data predictions
     preds_labels = svm_model.predict(X_test)
 
     #evaluation
-
-    #classification report (porovnanie skutocnych a predikovanych labels)
     print("\n--- SVM CLASSIFICATION REPORT ---")
     report = classification_report(
         y_test, 
@@ -32,8 +29,6 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names):
     )
     print(report)
 
-    #confusion matrix
-    #matrics bar chart
 
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate(classes)}
@@ -52,11 +47,11 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names):
 def print_SVM_input(X_train, y_train):
     print("\n--- SVM Model Input Data Summary ---")
     
-    # Pre SciPy maticu používame X_train.shape
+    # SciPy matrix
     print(f"X_train Shape (samples, features): {X_train.shape}")
     print(f"X_train Data Type: {X_train.dtype}")
     
-    # Pre Pandas Series (y_train) používame .shape
+    # Pandas Series
     print(f"y_train Shape (labels): {y_train.shape}")
     print(f"y_train Data Type: {y_train.dtype}")
     
@@ -76,6 +71,5 @@ def print_SVM_input(X_train, y_train):
         print("First sample (first 10 embedding values):")
 
     
-    # Vypíšeme len prvých 10 prvkov z hustého poľa (array)
     print(sample_vector[:10]) 
     print("-" * 30)

@@ -4,23 +4,23 @@ import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.font_manager as fm
 from matplotlib.colors import LinearSegmentedColormap
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import (precision_recall_curve, average_precision_score)
 
-# Path to your font file
+
+# Path to font file
 font_path ="/home/xkubanova_126831/bakalarka/font/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf"
-
-# Register font
 fm.fontManager.addfont(font_path)
-
-# Set as default font
 plt.rcParams['font.family'] = 'Open Sans'
 
 
-#CONFUSION MATRIX
+""" Confusion Matrix """
+
 def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
     cm = confusion_matrix(true_ids, preds_ids)
     cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
-    #display object
     disp = ConfusionMatrixDisplay(
         confusion_matrix=cm_normalized, 
         display_labels=target_names
@@ -31,7 +31,6 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
         ["#ffffff", "#abd2fa", "#2f52e0"]
     )
 
-    #plot matrix
     fig, ax = plt.subplots(figsize=(10,10))
     disp.plot(
         cmap=custom_cmap,
@@ -44,17 +43,17 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
     ax.set_ylabel('True Category', fontsize=16, fontweight='bold')
     ax.set_xlabel('Predicted Category', fontsize=16, fontweight='bold')
 
-    # Tick labels
     ax.tick_params(axis='both', labelsize=14)
 
-    # Numbers inside cells
+  
     for text in disp.text_.ravel():
         text.set_fontsize(30)
 
-    plt.tight_layout()
-
-    plt.show()
     filename = f'{prefix}confusion_matrix_results.png'
+
+    plt.tight_layout()
+    plt.show()
+    
     plt.savefig(filename) 
     plt.close(fig) 
     
@@ -62,13 +61,13 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
     
 
 
-#LEARNING CURVE
-# LEARNING CURVE
+""" Learning Curve """
+
 def plot_learning_curve(epochs, train_loss, val_loss, test_acc=None, prefix=''):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
     epoch_range = range(1, epochs + 1)
 
-    # Training + Validation loss
+    # Training and validation loss
     ax1.plot(
         epoch_range,
         train_loss,
@@ -117,8 +116,8 @@ def plot_learning_curve(epochs, train_loss, val_loss, test_acc=None, prefix=''):
 
     
 
-    
-# bar chart - F1 score
+""" Metrics Bar Chart """
+
 def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
     report = classification_report(
@@ -134,12 +133,8 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
         .iloc[:-3]
     )
 
-    # Round for readability
     df_report = df_report[['precision', 'recall', 'f1-score']].round(3)
 
-    # -----------------------
-    # BAR CHART
-    # -----------------------
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -172,10 +167,6 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
     plt.show()
     plt.close(fig)
-
-    # -----------------------
-    # TABLE FIGURE
-    # -----------------------
 
     fig, ax = plt.subplots(figsize=(8, 2 + len(df_report) * 0.5))
 
@@ -212,9 +203,6 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
     plt.show()
     plt.close(fig)
 
-    # -----------------------
-    # OPTIONAL EXPORTS
-    # -----------------------
 
     df_report.to_csv(
         f'{prefix}per_class_metrics.csv'
@@ -223,13 +211,7 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
     return df_report
     
 
-# -----------------------
-# ROC CURVE (MULTICLASS)
-# -----------------------
-from sklearn.metrics import roc_curve, auc
-from sklearn.preprocessing import label_binarize
-import matplotlib.pyplot as plt
-import numpy as np
+""" ROC Curve """
 
 
 PRIMARY = '#2f52e0'
@@ -244,10 +226,9 @@ def plot_roc_curve(labels, probs, prefix=''):
 
     n_classes = probs.shape[1]
 
-    # probs shape: [n_samples, n_classes]
+ 
     n_classes = probs.shape[1]
 
-    # one-hot encoding of labels
     labels_bin = label_binarize(
         labels,
         classes=np.arange(n_classes)
@@ -257,7 +238,6 @@ def plot_roc_curve(labels, probs, prefix=''):
 
     roc_auc_scores = []
 
-    # plot ROC for each class
     for i in range(n_classes):
 
         fpr, tpr, _ = roc_curve(
@@ -321,15 +301,8 @@ def plot_roc_curve(labels, probs, prefix=''):
     return roc_auc_scores
 
 
-# -----------------------
-# PR CURVE (MULTICLASS)
-# -----------------------
 
-from sklearn.metrics import (
-    precision_recall_curve,
-    average_precision_score
-)
-
+""" Precision-Recall Curve """
 
 def plot_precision_recall_curve(labels, probs, prefix=''):
 
