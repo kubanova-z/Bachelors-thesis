@@ -5,7 +5,11 @@ import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.font_manager as fm
 import os
-os.makedirs('/img', exist_ok=True)
+
+import os
+
+IMG_DIR = '/home/xkubanova_126831/bakalarka/nbs_binary/img'
+os.makedirs(IMG_DIR, exist_ok=True)
 
 # Path to font file
 font_path ="/home/xkubanova_126831/bakalarka/font/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf"
@@ -49,7 +53,7 @@ def plot_confusion_matrix(true_ids, preds_ids, target_names, prefix=''):
 
     plt.tight_layout()
 
-    filename = f'/img/{prefix}confusion_matrix_results.png'
+    filename = f'{IMG_DIR}/{prefix}confusion_matrix_results.png'
     plt.savefig(filename, dpi=300, bbox_inches='tight')
 
     plt.show()
@@ -83,14 +87,13 @@ def plot_learning_curve(epochs, train_loss, test_acc, prefix=''):
         color='#a5835a',
         linewidth=2
     )
-    ax2.plot(epoch_range, test_acc, label='Test accuracy', color='blue')
     ax2.set_title('Test accuracy per Epoch', fontsize=14)
     ax2.set_xlabel('Epoch', fontsize=12)
     ax2.set_ylabel('Accuracy', fontsize=12)
     ax2.legend()
     ax2.grid(True, linestyle='--', alpha=0.6)
 
-    filename = f'/img/{prefix}learning_curve.png'
+    filename = f'{IMG_DIR}/{prefix}learning_curve.png'
 
     plt.show()
     plt.savefig(filename)
@@ -143,7 +146,7 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
     plt.tight_layout()
 
-    filename = f'/img/{prefix}per_class_metrics.png'
+    filename = f'{IMG_DIR}/{prefix}per_class_metrics.png'
     plt.savefig(filename, dpi=300)
 
     plt.show()
@@ -173,7 +176,7 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
     plt.tight_layout()
 
-    filename_table = f'/img/{prefix}per_class_metrics_table.png'
+    filename_table = f'{IMG_DIR}/{prefix}per_class_metrics_table.png'
 
     plt.savefig(
         filename_table,
@@ -186,7 +189,7 @@ def plot_metrics_bar_chart(true_ids, preds_ids, target_names, prefix=''):
 
 
     df_report.to_csv(
-        f'/img/{prefix}per_class_metrics.csv'
+        f'{IMG_DIR}/{prefix}per_class_metrics.csv'
     )
 
     return df_report
@@ -249,7 +252,7 @@ def plot_roc_curve(labels, probs, prefix=''):
 
     plt.tight_layout()
 
-    filename = f'/img/{prefix}roc_curve.png'
+    filename = f'{IMG_DIR}/{prefix}roc_curve.png'
 
     plt.savefig(
         filename,
@@ -301,7 +304,7 @@ def plot_precision_recall_curve(labels, probs, prefix=''):
 
     plt.tight_layout()
 
-    filename = f'/img/{prefix}precision_recall_curve.png'
+    filename = f'{IMG_DIR}/{prefix}precision_recall_curve.png'
 
     plt.savefig(
        filename,
