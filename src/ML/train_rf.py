@@ -14,7 +14,7 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names, boost_fa
     print("RANDOM FOREST")
     print("="*50)
 
-    print_rf_input(X_train, y_train)
+    #print_rf_input(X_train, y_train)
 
     classes = np.array(sorted(list(set(y_train))))
     class_weights = compute_class_weight(
@@ -115,7 +115,7 @@ def print_rf_input(X_train, y_train):
         sample_vector = X_train[0]
         print("First sample (first 10 embedding values):")
     
-    print("Prvá vzorka (prvých 10 TF-IDF hodnôt):")
+    print("First sample (first 10 values):")
     print(sample_vector[:10]) 
     print("-" * 30)
 

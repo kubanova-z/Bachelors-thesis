@@ -11,7 +11,7 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names, boost_factor = 1.0
     print("SUPPORT VECTOR MACHINE (SVM)")
     print("="*50)
 
-    print_SVM_input(X_train, y_train)
+    #print_SVM_input(X_train, y_train)
 
     # compute class weights
     classes = np.unique(y_train)
@@ -93,7 +93,7 @@ def print_SVM_input(X_train, y_train):
     if hasattr(X_train[0], "toarray"):  
         # TF-IDF sparse vector
         sample_vector = X_train[0].toarray()[0]
-        print("First sample (first 10 TF-IDF feature values):")
+        print("First sample (first 10 feature values):")
     else:
         # Dense embedding (NumPy array)
         sample_vector = X_train[0]
