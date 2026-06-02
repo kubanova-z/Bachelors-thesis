@@ -14,7 +14,7 @@ import pandas as pd
 import torch.nn.functional as F
 
 #feed forward neural network
-#inupt(dim) - size of the input features (3000)
+#inupt(dim) - size of the input features 
 #hidden(dim) - number of neurons in the hidden layer
 #dropout - probability of a neuron being set to zero (only during training)
 
@@ -71,7 +71,7 @@ class DeepTextClassifier(nn.Module):
 
 
 """ Focal Loss """    
-""" Focal loss = pre nevyvazene datasety"""
+
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=1, gamma=2, reduction='mean'):
@@ -87,16 +87,13 @@ class FocalLoss(nn.Module):
        
 
     def forward(self, inputs, targets):
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none') # cross entropy loss (vrati CE pre vzorku - batch)
-        pt = torch.exp(-ce_loss)    # konverzia CE na pravdepodobnost (s akou pravdepodobnostou je modla modelu trieda spravna)
-        if self.alpha_is_scalar:    # aplha = scalar, rovnake vahy pre vsetky triedy
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none') 
+        pt = torch.exp(-ce_loss)    
+        if self.alpha_is_scalar:    
             alpha_factor = self.alpha
         else:
-            # alpha = tensor - balansovanie tried 
-            # triede 1 sme nastavili vyssiu vahu ako 0 triede
+            
             alpha_factor = self.alpha[targets]  
-
-            # gamma - fokus na tazsie vzorky
 
         focal_loss = alpha_factor * (1 - pt) ** self.gamma * ce_loss
 
@@ -118,23 +115,23 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # convert inputs to PyTorch tensors - tp be able to handle both TF-IDF and embeddings
+   
     if hasattr(X_train, "toarray"): # TF-IDF
         X_train_tensor = torch.tensor(X_train.toarray()).float()
-    else:   #embedding
+    else: 
         X_train_tensor = torch.tensor(X_train).float()
         
 
-    if hasattr(X_test, "toarray"): # TF-IDF
+    if hasattr(X_test, "toarray"): 
         X_test_tensor = torch.tensor(X_test.toarray()).float()
-    else:   #embedding
+    else:   
         X_test_tensor = torch.tensor(X_test).float()
 
 
-    #sparse matrices (convert to pytorch float)
-    if hasattr(X_train, "toarray"):  # e.g. TF-IDF sparse matrix
+  
+    if hasattr(X_train, "toarray"): 
         X_train = torch.tensor(X_train.toarray()).float()
-    else:  # e.g. Word2Vec numpy array
+    else: 
         X_train = torch.tensor(X_train).float()
 
     if hasattr(X_test, "toarray"):
@@ -142,12 +139,12 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     else:
         X_test = torch.tensor(X_test).float()
 
-    # cotegories -> integers
+   
     classes = sorted(list(set(y_train)))
     class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
 
   
-    #training and test category labels (panda series) - map to correct ids
+    #train and test category 
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
@@ -156,7 +153,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     class_weights = compute_class_weight(
         class_weight='balanced',
         classes=np.array(classes),
-        y=y_train.numpy()   # convert tensor to numpy array
+        y=y_train.numpy()   
     )
 
     boost_factor = 2
@@ -175,8 +172,7 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
     
-  
-    #initialization of text classifier - used model
+
     input_dim = X_train_tensor.shape[1]
     output_dim = len(class_to_idx)
     
@@ -191,37 +187,36 @@ def train_model(X_train, y_train, X_test, y_test, model_class =TextClassifier, m
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     #accuracy and loss
-
     train_loss_history = []
     test_acc_history = []
 
     
 
 
-    #TRAINING
+    #training
     for epoch in range(epochs):
-        model.train()   #set to training mode (enable dropout)
+        model.train()   
         epoch_loss = 0.0
 
         for xb, yb in train_loader:
             xb, yb = xb.to(device), yb.to(device)
 
-            optimizer.zero_grad()   #reset gradients
-            outputs = model(xb)    #predicted outputs
-            loss = criterion(outputs, yb) #calculate loss
-            loss.backward() #backward pass - algoritmus spatneho sirenia chyby
-            optimizer.step()    #update model weights based on gradients
+            optimizer.zero_grad()  
+            outputs = model(xb)    
+            loss = criterion(outputs, yb) 
+            loss.backward() 
+            optimizer.step()  
             
             epoch_loss += loss.item() * xb.size(0) 
 
-        avg_epoch_loss = epoch_loss / len(train_loader.dataset)  # average loss per sample
+        avg_epoch_loss = epoch_loss / len(train_loader.dataset)  
         train_loss_history.append(avg_epoch_loss)
         #if(epoch % 10 == 0):
         #    print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
 
     
     # validation after each epoch
-        model.eval()    #set to evaluation mode (disable dropout)
+        model.eval()  
         correct = 0
         total = 0
 
@@ -277,24 +272,24 @@ def train_model_sample_weights(X_train, y_train, X_test, y_test, model_class =Te
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # convert inputs to PyTorch tensors - tp be able to handle both TF-IDF and embeddings
 
-    if hasattr(X_train, "toarray"): # TF-IDF
+
+    if hasattr(X_train, "toarray"):
         X_train_tensor = torch.tensor(X_train.toarray()).float()
-    else:   #embedding
+    else:  
         X_train_tensor = torch.tensor(X_train).float()
         
 
-    if hasattr(X_test, "toarray"): # TF-IDF
+    if hasattr(X_test, "toarray"): 
         X_test_tensor = torch.tensor(X_test.toarray()).float()
-    else:   #embedding
+    else:  
         X_test_tensor = torch.tensor(X_test).float()
 
 
-    #sparse matrices (convert to pytorch float)
-    if hasattr(X_train, "toarray"):  # e.g. TF-IDF sparse matrix
+   
+    if hasattr(X_train, "toarray"):  
         X_train = torch.tensor(X_train.toarray()).float()
-    else:  # e.g. Word2Vec numpy array
+    else:  
         X_train = torch.tensor(X_train).float()
 
     if hasattr(X_test, "toarray"):
@@ -302,23 +297,21 @@ def train_model_sample_weights(X_train, y_train, X_test, y_test, model_class =Te
     else:
         X_test = torch.tensor(X_test).float()
 
-    # cotegories -> integers
+  
     classes = sorted(list(set(y_train)))
-    class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
+    class_to_idx = {cls: i for i, cls in enumerate(classes)} 
 
 
-    #training and test category labels (panda series) - map to correct ids
+   
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
-    # class weights fo samples
-    class_sample_counts = np.bincount(y_train.numpy()) # number of samples in each class
+    # class weights for samples
+    class_sample_counts = np.bincount(y_train.numpy()) 
     weights = 1. / class_sample_counts
     sample_weights = weights[y_train.numpy()] 
 
 
-    # each batch will contain samles according to computed weights
-    # class 1 should appear more frequently in batches
     sampler = WeightedRandomSampler(
         weights=sample_weights,
         num_samples=len(sample_weights),
@@ -333,7 +326,7 @@ def train_model_sample_weights(X_train, y_train, X_test, y_test, model_class =Te
     test_ds = TensorDataset(X_test, y_test)
 
 
-# shuffle is not used when sampler is provided
+
     train_loader = DataLoader(train_ds, batch_size=batch_size, sampler = sampler)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
     
@@ -343,7 +336,7 @@ def train_model_sample_weights(X_train, y_train, X_test, y_test, model_class =Te
     #print sample of inputs
     #print_NN_input_sample(X_train, y_train)
 
-    #initialization of text classifier - used model
+    #initialization of text classifier 
     input_dim = X_train_tensor.shape[1]
     output_dim = len(class_to_idx)
     
@@ -363,19 +356,19 @@ def train_model_sample_weights(X_train, y_train, X_test, y_test, model_class =Te
     
 
 
-    #TRAINING
+    #training
     for epoch in range(epochs):
-        model.train()   #set to training mode (enable dropout)
+        model.train()   
         epoch_loss = 0.0
 
         for xb, yb in train_loader:
             xb, yb = xb.to(device), yb.to(device)
 
-            optimizer.zero_grad()   #reset gradients
-            outputs = model(xb)    #predicted outputs
-            loss = criterion(outputs, yb) #calculate loss
-            loss.backward() #backward pass - algoritmus spatneho sirenia chyby
-            optimizer.step()    #update model weights based on gradients
+            optimizer.zero_grad()   
+            outputs = model(xb)    
+            loss = criterion(outputs, yb) 
+            loss.backward() 
+            optimizer.step()    
             
             epoch_loss += loss.item() * xb.size(0)
         train_loss_history.append(epoch_loss / len(train_loader.dataset)) 
@@ -383,7 +376,7 @@ def train_model_sample_weights(X_train, y_train, X_test, y_test, model_class =Te
        
 
     
-        model.eval()    #set to evaluation mode (disable dropout)
+        model.eval()    
         correct = 0
         total = 0
 
@@ -437,24 +430,23 @@ def train_model_class_weights_and_sampling(X_train, y_train, X_test, y_test, mod
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # convert inputs to PyTorch tensors - tp be able to handle both TF-IDF and embeddings
+    
 
-    if hasattr(X_train, "toarray"): # TF-IDF
+    if hasattr(X_train, "toarray"): 
         X_train_tensor = torch.tensor(X_train.toarray()).float()
-    else:   #embedding
+    else:  
         X_train_tensor = torch.tensor(X_train).float()
         
 
-    if hasattr(X_test, "toarray"): # TF-IDF
+    if hasattr(X_test, "toarray"): 
         X_test_tensor = torch.tensor(X_test.toarray()).float()
-    else:   #embedding
+    else:   
         X_test_tensor = torch.tensor(X_test).float()
 
 
-    #sparse matrices (convert to pytorch float)
-    if hasattr(X_train, "toarray"):  # e.g. TF-IDF sparse matrix
+    if hasattr(X_train, "toarray"):  
         X_train = torch.tensor(X_train.toarray()).float()
-    else:  # e.g. Word2Vec numpy array
+    else: 
         X_train = torch.tensor(X_train).float()
 
     if hasattr(X_test, "toarray"):
@@ -462,11 +454,11 @@ def train_model_class_weights_and_sampling(X_train, y_train, X_test, y_test, mod
     else:
         X_test = torch.tensor(X_test).float()
 
-    # cotegories -> integers
+   
     classes = sorted(list(set(y_train)))
-    class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
+    class_to_idx = {cls: i for i, cls in enumerate(classes)} 
 
-    #training and test category labels (panda series) - map to correct ids
+    
     y_train = torch.tensor(y_train.map(class_to_idx).values).long()
     y_test = torch.tensor(y_test.map(class_to_idx).values).long()
 
@@ -475,7 +467,7 @@ def train_model_class_weights_and_sampling(X_train, y_train, X_test, y_test, mod
     class_weights = compute_class_weight(
         class_weight='balanced',
         classes=np.array(classes),
-        y=y_train.numpy()   # convert tensor to numpy array
+        y=y_train.numpy()   
     )
 
     boost_factor = 2
@@ -510,7 +502,7 @@ def train_model_class_weights_and_sampling(X_train, y_train, X_test, y_test, mod
     #print sample of inputs
     #print_NN_input_sample(X_train, y_train)
 
-    #initialization of text classifier - used model
+    #initialization of text classifier
     input_dim = X_train_tensor.shape[1]
     output_dim = len(class_to_idx)
     
@@ -525,35 +517,34 @@ def train_model_class_weights_and_sampling(X_train, y_train, X_test, y_test, mod
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     #accuracy and loss
-
     train_loss_history = []
     test_acc_history = []
 
     
 
 
-    #TRAINING
+    #training
     for epoch in range(epochs):
-        model.train()   #set to training mode (enable dropout)
+        model.train()   
         epoch_loss = 0.0
 
         for xb, yb in train_loader:
             xb, yb = xb.to(device), yb.to(device)
 
-            optimizer.zero_grad()   #reset gradients
-            outputs = model(xb)    #predicted outputs
-            loss = criterion(outputs, yb) #calculate loss
-            loss.backward() #backward pass - algoritmus spatneho sirenia chyby
-            optimizer.step()    #update model weights based on gradients
+            optimizer.zero_grad()  
+            outputs = model(xb)    
+            loss = criterion(outputs, yb) 
+            loss.backward() 
+            optimizer.step()   
             
             epoch_loss += loss.item() * xb.size(0) 
 
-        avg_epoch_loss = epoch_loss / len(train_loader.dataset)  # average loss per sample
+        avg_epoch_loss = epoch_loss / len(train_loader.dataset)  
         train_loss_history.append(avg_epoch_loss)
        
 
     
-        model.eval()    #set to evaluation mode (disable dropout)
+        model.eval()   
         correct = 0
         total = 0
 
@@ -615,7 +606,7 @@ def train_minilm_nn(X_train, y_train, X_test, y_test, model_class=TextClassifier
 
     #labels
     classes = sorted(list(set(y_train)))
-    class_to_idx = {cls: i for i, cls in enumerate(classes)} #category + integer id
+    class_to_idx = {cls: i for i, cls in enumerate(classes)} 
 
     y_train = torch.tensor(y_train.map(class_to_idx).values).long().to(device)
     y_test = torch.tensor(y_test.map(class_to_idx).values).long().to(device)
@@ -624,7 +615,7 @@ def train_minilm_nn(X_train, y_train, X_test, y_test, model_class=TextClassifier
     class_weights = compute_class_weight(
         class_weight='balanced',
         classes=np.array(classes),
-        y=y_train.cpu().numpy()   # convert tensor to numpy array
+        y=y_train.cpu().numpy()   
     )
     class_weights[1] *= boost_factor
     class_weights = torch.tensor(class_weights, dtype=torch.float32).to(device)
@@ -766,7 +757,7 @@ def train_nn_with_focal_loss(model, train_loader, val_loader, num_epochs=10, lr=
         if scheduler:
             scheduler.step(val_loss)
 
-    idx_to_class = {i: str(i) for i in set(all_labels)}  # If your dataset has string labels, adjust accordingly
+    idx_to_class = {i: str(i) for i in set(all_labels)} 
     target_names = [str(idx_to_class[i]) for i in sorted(idx_to_class.keys())]
 
 
@@ -788,6 +779,6 @@ def print_NN_input_sample(X_train, y_train):
     print("-" * 30)
 
     print("First sample (first 10 features):")
-    # Using .cpu().numpy() to ensure compatibility if a GPU is used, and for readability
+    
     print(X_train[0][:10].cpu().numpy())
     print("-" * 30)
