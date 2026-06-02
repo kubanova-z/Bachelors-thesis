@@ -7,7 +7,7 @@ def train_SVM(X_train, y_train, X_test, y_test, target_names):
     print("SUPPORT VECTOR MACHINE (SVM)")
     print("="*50)
 
-    print_SVM_input(X_train, y_train)
+    #print_SVM_input(X_train, y_train)
 
     #initialization of SVM model
     #C regulatory parameter (higher -> risk of overfitting, lower -> more errors, but larger margin)
@@ -64,7 +64,7 @@ def print_SVM_input(X_train, y_train):
     if hasattr(X_train[0], "toarray"):  
         # TF-IDF sparse vector
         sample_vector = X_train[0].toarray()[0]
-        print("First sample (first 10 TF-IDF feature values):")
+        print("First sample (first 10 feature values):")
     else:
         # Dense embedding (NumPy array)
         sample_vector = X_train[0]

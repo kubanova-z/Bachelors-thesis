@@ -10,7 +10,7 @@ def train_random_forest(X_train, y_train, X_test, y_test, target_names):
     print("RANDOM FOREST")
     print("="*50)
 
-    print_rf_input(X_train, y_train)
+    #print_rf_input(X_train, y_train)
 
     #initialization of Random Forest model
     #n_estimators = number of decision trees
@@ -73,7 +73,7 @@ def print_rf_input(X_train, y_train):
         sample_vector = X_train[0]
         print("First sample (first 10 embedding values):")
     
-    print("Prvá vzorka (prvých 10 TF-IDF hodnôt):")
+    print("Prvá vzorka (prvých 10 hodnôt):")
     # Vypíšeme len prvých 10 prvkov z hustého poľa (array)
     print(sample_vector[:10]) 
     print("-" * 30)

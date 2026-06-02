@@ -1,5 +1,5 @@
 ,precision,recall,f1-score
-Books,0.975,0.962,0.969
-Clothing & Accessories,0.987,0.972,0.979
-Electronics,0.95,0.967,0.958
-Household,0.966,0.971,0.969
+Books,0.988,0.947,0.967
+Clothing & Accessories,0.979,0.978,0.978
+Electronics,0.963,0.961,0.962
+Household,0.957,0.983,0.97
